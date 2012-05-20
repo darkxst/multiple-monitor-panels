@@ -1,0 +1,9 @@
+// Will need to connect to this signal
+// Main.layoutManager.connect('monitors-changed', Lang.bind(this, this._updatePanels));
+
+Known Issues:
+1. need to re-sync when moving window across monitors
+2. Starting app always show icon/animation on monitor with focused window, 
+   could use global.get_pointer(), and check it by mouse.
+3. connect signals (i.e. monitors-changed)
+
