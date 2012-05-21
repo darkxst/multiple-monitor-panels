@@ -23,6 +23,8 @@ const Lang = imports.lang;
 const Shell = imports.gi.Shell;
 const Tweener = imports.ui.tweener;
 const Overview = imports.ui.overview;
+const Meta = imports.gi.Meta;
+
 
 const St = imports.gi.St;
 
@@ -113,6 +115,22 @@ const NewAppMenuButton = new Lang.Class({
 				this.lastFocusedApp = targetApp;
 			}		
 		}
+		//find last used app window
+		if (targetApp == null) {
+			let tracker = Shell.WindowTracker.get_default();
+			let screen = global.screen;
+        	let display = screen.get_display();
+        	let windows = display.get_tab_list(Meta.TabList.NORMAL_ALL, screen,
+                                           screen.get_active_workspace());
+
+			for (let i = 0; i < windows.length; i++){			
+		
+				if (windows[i].get_monitor() == this.monitorIndex){
+					targetApp = tracker.get_window_app(windows[i]);
+					break;
+				}
+			};
+		}
 
         if (targetApp == null) {
             if (!this._targetIsCurrent)
@@ -188,6 +206,7 @@ const NewAppMenuButton = new Lang.Class({
 
 
 function init() {
+	log("init mmP");
     /*do nothing*/
 }
 
@@ -206,6 +225,7 @@ function enable() {
 				panel = Main.__eP.panels[i];
 			}
 			let left_children = panel._leftBox.get_children();
+
 			left_children.forEach(function(lchild){
 				if (lchild._delegate instanceof Panel.AppMenuButton){
 						lchild.destroy();
