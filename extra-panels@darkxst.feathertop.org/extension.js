@@ -98,9 +98,9 @@ const NewAppMenuButton = new Lang.Class({
 		let state = app.state;
 
 		if (state != Shell.AppState.STARTING) {
-            this._startingApps = this._startingApps.filter(function(a) {
-                return a != app;
-            });
+			this._startingApps = this._startingApps.filter(function(a) {
+				return a != app;
+		});
 		} else if (state == Shell.AppState.STARTING && this.monitorIndex == this._getPointerMonitor() ) {
             this._startingApps.push(app);
 		}
@@ -119,8 +119,8 @@ const NewAppMenuButton = new Lang.Class({
 		let lastStartedApp = null;
 		let workspace = global.screen.get_active_workspace();
 		for (let i = 0; i < this._startingApps.length; i++)
-            if (this._startingApps[i].is_on_workspace(workspace))
-                lastStartedApp = this._startingApps[i];
+			if (this._startingApps[i].is_on_workspace(workspace))
+				lastStartedApp = this._startingApps[i];
 
 		let targetApp = focusedApp != null ? null : lastStartedApp;
 	
@@ -128,8 +128,8 @@ const NewAppMenuButton = new Lang.Class({
 		if (targetApp == null) {
 			let tracker = Shell.WindowTracker.get_default();
 			let screen = global.screen;
-        	let display = screen.get_display();
-        	let windows = display.get_tab_list(Meta.TabList.NORMAL_ALL, screen,
+			let display = screen.get_display();
+			let windows = display.get_tab_list(Meta.TabList.NORMAL_ALL, screen,
                                            screen.get_active_workspace());
 
 			for (let i = 0; i < windows.length; i++){			
@@ -143,8 +143,8 @@ const NewAppMenuButton = new Lang.Class({
 		}
 
 		if (targetApp == null) {
-            if (!this._targetIsCurrent)
-                return;
+			if (!this._targetIsCurrent)
+				return;
 
             this.actor.reactive = false;
             this._targetIsCurrent = false;
@@ -153,46 +153,46 @@ const NewAppMenuButton = new Lang.Class({
             Tweener.addTween(this.actor, { opacity: 0,
                                            time: Overview.ANIMATION_TIME,
                                            transition: 'easeOutQuad' });
-            return;
+			return;
 		}
 
 		if (!targetApp.is_on_workspace(workspace))
-            return;
+			return;
 
 		if (!this._targetIsCurrent) {
-            this.actor.reactive = true;
-            this._targetIsCurrent = true;
+			this.actor.reactive = true;
+			this._targetIsCurrent = true;
 
-            Tweener.removeTweens(this.actor);
-            Tweener.addTween(this.actor, { opacity: 255,
+			Tweener.removeTweens(this.actor);
+			Tweener.addTween(this.actor, { opacity: 255,
                                            time: Overview.ANIMATION_TIME,
                                            transition: 'easeOutQuad' });
 		}
 
 		if (targetApp == this._targetApp) {
-            if (targetApp && targetApp.get_state() != Shell.AppState.STARTING) {
-                this.stopAnimation();
-                this._maybeSetMenu();
-            }
-            return;
+			if (targetApp && targetApp.get_state() != Shell.AppState.STARTING) {
+				this.stopAnimation();
+				this._maybeSetMenu();
+			}
+			return;
 		}
 
 		this._spinner.actor.hide();
 		if (this._iconBox.child != null)
-            this._iconBox.child.destroy();
+			this._iconBox.child.destroy();
 		this._iconBox.hide();
 		this._label.setText('');
 
 		if (this._appMenuNotifyId)
-            this._targetApp.disconnect(this._appMenuNotifyId);
+			this._targetApp.disconnect(this._appMenuNotifyId);
 		if (this._actionGroupNotifyId)
-            this._targetApp.disconnect(this._actionGroupNotifyId);
+			this._targetApp.disconnect(this._actionGroupNotifyId);
 		if (targetApp) {
-            this._appMenuNotifyId = targetApp.connect('notify::menu', Lang.bind(this, this._sync));
-            this._actionGroupNotifyId = targetApp.connect('notify::action-group', Lang.bind(this, this._sync));
+			this._appMenuNotifyId = targetApp.connect('notify::menu', Lang.bind(this, this._sync));
+			this._actionGroupNotifyId = targetApp.connect('notify::action-group', Lang.bind(this, this._sync));
 		} else {
-            this._appMenuNotifyId = 0;
-            this._actionGroupNotifyId = 0;
+			this._appMenuNotifyId = 0;
+			this._actionGroupNotifyId = 0;
 		}
 
 		this._targetApp = targetApp;
@@ -205,9 +205,9 @@ const NewAppMenuButton = new Lang.Class({
 		this._iconBox.show();
 
 		if (targetApp.get_state() == Shell.AppState.STARTING)
-            this.startAnimation();
+			this.startAnimation();
 		else
-            this._maybeSetMenu();
+			this._maybeSetMenu();
 
 		this.emit('changed');
 	}
@@ -247,7 +247,7 @@ function enable() {
 	}
 	//emit signal to force initial AppMenu sync
 	let tracker = Shell.WindowTracker.get_default();
-	tracker.get_default().emit('notify::focus-app', tracker.focus_app);
+	tracker.emit('notify::focus-app', tracker.focus_app);
 }
 
 function disable() {
