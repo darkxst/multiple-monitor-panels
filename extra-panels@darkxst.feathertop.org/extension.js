@@ -46,7 +46,6 @@ const ExtraPanels = new Lang.Class({
             if (i == this.primaryIndex)
 				continue;
 
-			//log("monitor: "+i);
 			this.panelBoxes[i] = new St.BoxLayout({ name: 'panelBox'+(i+1), vertical: true });
 			Main.layoutManager.addChrome(this.panelBoxes[i], { affectsStruts: true });
 			this.panels[i] = new Panel.Panel();
@@ -71,11 +70,10 @@ const NewAppMenuButton = new Lang.Class({
     Extends: Panel.AppMenuButton,
 
 	_init: function(monitorIndex){
-		//log("loading newAppMenu");
 		this.parent(Main.panel._menus);
 		this.monitorIndex = monitorIndex;
 		this.lastFocusedApp = Shell.WindowTracker.get_default().focus_app;
-		//this.prevFocusedApp = null;
+
 	},
 	_getPointerMonitor: function() {
 		let monitors = Main.layoutManager.monitors;
@@ -117,23 +115,8 @@ const NewAppMenuButton = new Lang.Class({
             if (this._startingApps[i].is_on_workspace(workspace))
                 lastStartedApp = this._startingApps[i];
 
-        //let targetApp = focusedApp != null ? focusedApp : lastStartedApp;
 		let targetApp = focusedApp != null ? null : lastStartedApp;
 	
-		/*if (global.display.focus_window){
-			if (this.monitorIndex != global.display.focus_window.get_monitor()){
-				let targetApp = focusedApp != null ? focusedApp : lastStartedApp;
-				if (this.lastFocusedApp)				
-					targetApp = this.lastFocusedApp.state == Shell.AppState.STOPPED ? null : this.lastFocusedApp;				
-			} else {
-				//this.prevFocusedApp = this.lastFocusedApp;
-				this.lastFocusedApp = targetApp;
-			}		
-		} else {
-			targetApp = null;
-			log("no focus: null"+this.monitorIndex);
-		}*/
-
 		//find last used app window
 		if (targetApp == null) {
 			let tracker = Shell.WindowTracker.get_default();
