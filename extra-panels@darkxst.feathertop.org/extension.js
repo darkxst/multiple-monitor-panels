@@ -53,6 +53,7 @@ const ExtraPanels = new Lang.Class({
 			this.panelBoxes[i].add(this.panels[i].actor)
 			this.panelBoxes[i].set_position(this.monitors[i].x, this.monitors[i].y);
 		}
+		this.monSigId = Main.layoutManager.connect('monitors-changed', Lang.bind(this, this._updatePanels));
 	},
 	destroy : function(){
 
@@ -62,6 +63,11 @@ const ExtraPanels = new Lang.Class({
 			this.panels[i].actor.destroy();
 			this.panelBoxes = null;
 		}
+		Main.layoutManager.disconnect(this.monSigId);
+	},
+	_updatePanels : function(){
+		this.destroy();
+		this._init();
 	}
 });
 
@@ -73,6 +79,7 @@ const NewAppMenuButton = new Lang.Class({
 		this.parent(Main.panel._menus);
 		this.monitorIndex = monitorIndex;
 		this.lastFocusedApp = Shell.WindowTracker.get_default().focus_app;
+		this.grabSigId = global.display.connect('grab-op-end', Lang.bind(this, this._sync));
 
 	},
 	_getPointerMonitor: function() {
@@ -129,7 +136,7 @@ const NewAppMenuButton = new Lang.Class({
 		
 				if (windows[i].get_monitor() == this.monitorIndex){
 					targetApp = tracker.get_window_app(windows[i]);
-					log(targetApp.get_name());
+					//log(targetApp.get_name());
 					break;
 				}
 			};
@@ -214,7 +221,7 @@ function init() {
 }
 
 function enable() {
-	log("Loading Extra Panels");
+	log("Loading Extra Panels Extension");
     let eP = new ExtraPanels();
 	Main.__eP = eP;
 	Main.panel._appMenus = [];
@@ -238,6 +245,9 @@ function enable() {
 			Main.panel._appMenus[i] = new NewAppMenuButton(i);
 			panel._leftBox.add(Main.panel._appMenus[i].actor)
 	}
+	//emit signal to force initial AppMenu sync
+	let tracker = Shell.WindowTracker.get_default();
+	tracker.get_default().emit('notify::focus-app', tracker.focus_app);
 }
 
 function disable() {
@@ -246,8 +256,10 @@ function disable() {
 	//replace on primary with original appMenu
 	let left_children = Main.panel._leftBox.get_children();
 	left_children.forEach(function(lchild){
-		if (lchild._delegate instanceof NewAppMenuButton)
+		if (lchild._delegate instanceof NewAppMenuButton){
+			global.display.disconnect(lchild._delegate.grabSigId); 		
 			lchild.destroy();
+		}
 	});
 	Main.panel._appMenu = new Panel.AppMenuButton(Main.panel._menus);
 	Main.panel._leftBox.add(Main.panel._appMenu.actor);
