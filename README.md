@@ -1,4 +1,4 @@
 multiple-monitor-panels
 =======================
 
-Add panels including AppMenu to each additional monitor.
+Gnome-shell extension that adds panels including AppMenu to each additional monitor.

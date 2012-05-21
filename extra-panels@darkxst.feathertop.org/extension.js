@@ -46,7 +46,7 @@ const ExtraPanels = new Lang.Class({
             if (i == this.primaryIndex)
 				continue;
 
-			log("monitor: "+i);
+			//log("monitor: "+i);
 			this.panelBoxes[i] = new St.BoxLayout({ name: 'panelBox'+(i+1), vertical: true });
 			Main.layoutManager.addChrome(this.panelBoxes[i], { affectsStruts: true });
 			this.panels[i] = new Panel.Panel();
@@ -57,7 +57,7 @@ const ExtraPanels = new Lang.Class({
 	},
 	destroy : function(){
 
-		for (let i = 0; i < this.monitors.length; i++) {
+		for (let i = 0; i < this.panels.length; i++) {
             if (i == this.primaryIndex)
 				continue;
 			this.panels[i].actor.destroy();
@@ -71,19 +71,32 @@ const NewAppMenuButton = new Lang.Class({
     Extends: Panel.AppMenuButton,
 
 	_init: function(monitorIndex){
-		log("loading newAppMenu");
+		//log("loading newAppMenu");
 		this.parent(Main.panel._menus);
 		this.monitorIndex = monitorIndex;
 		this.lastFocusedApp = Shell.WindowTracker.get_default().focus_app;
-		this.prevFocusedApp = null;
+		//this.prevFocusedApp = null;
+	},
+	_getPointerMonitor: function() {
+		let monitors = Main.layoutManager.monitors;
+		[x, y, mod] = global.get_pointer();
+		for (let j =0; j < monitors.length; j++){
+			if ( x > monitors[j].x && x < (monitors[j].x + monitors[j].width) && 
+				 y > monitors[j].y && (monitors[j].y + monitors[j].height)){
+					return j;
+			}
+		}
+		return -1;
+		
 	},
 	_onAppStateChanged: function(appSys, app) {
         let state = app.state;
+
         if (state != Shell.AppState.STARTING) {
             this._startingApps = this._startingApps.filter(function(a) {
                 return a != app;
             });
-        } else if (state == Shell.AppState.STARTING && this.monitorIndex == global.display.focus_window.get_monitor() ) {
+        } else if (state == Shell.AppState.STARTING && this.monitorIndex == this._getPointerMonitor() ) {
             this._startingApps.push(app);
         }
         // For now just resync on all running state changes; this is mainly to handle
@@ -104,17 +117,23 @@ const NewAppMenuButton = new Lang.Class({
             if (this._startingApps[i].is_on_workspace(workspace))
                 lastStartedApp = this._startingApps[i];
 
-        let targetApp = focusedApp != null ? focusedApp : lastStartedApp;
-
-		if (global.display.focus_window){
+        //let targetApp = focusedApp != null ? focusedApp : lastStartedApp;
+		let targetApp = focusedApp != null ? null : lastStartedApp;
+	
+		/*if (global.display.focus_window){
 			if (this.monitorIndex != global.display.focus_window.get_monitor()){
+				let targetApp = focusedApp != null ? focusedApp : lastStartedApp;
 				if (this.lastFocusedApp)				
-					targetApp = this.lastFocusedApp.state == Shell.AppState.STOPPED ? this.prevFocusedApp : this.lastFocusedApp;				
+					targetApp = this.lastFocusedApp.state == Shell.AppState.STOPPED ? null : this.lastFocusedApp;				
 			} else {
-				this.prevFocusedApp = this.lastFocusedApp;
+				//this.prevFocusedApp = this.lastFocusedApp;
 				this.lastFocusedApp = targetApp;
 			}		
-		}
+		} else {
+			targetApp = null;
+			log("no focus: null"+this.monitorIndex);
+		}*/
+
 		//find last used app window
 		if (targetApp == null) {
 			let tracker = Shell.WindowTracker.get_default();
@@ -127,6 +146,7 @@ const NewAppMenuButton = new Lang.Class({
 		
 				if (windows[i].get_monitor() == this.monitorIndex){
 					targetApp = tracker.get_window_app(windows[i]);
+					log(targetApp.get_name());
 					break;
 				}
 			};
@@ -206,7 +226,7 @@ const NewAppMenuButton = new Lang.Class({
 
 
 function init() {
-	log("init mmP");
+
     /*do nothing*/
 }
 
