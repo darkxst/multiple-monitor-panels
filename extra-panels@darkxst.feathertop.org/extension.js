@@ -43,7 +43,7 @@ const ExtraPanels = new Lang.Class({
 		Main.layoutManager.panelBoxes = this.panelBoxes;
 		
 		for (let i = 0; i < this.monitors.length; i++) {
-            if (i == this.primaryIndex)
+			if (i == this.primaryIndex)
 				continue;
 
 			this.panelBoxes[i] = new St.BoxLayout({ name: 'panelBox'+(i+1), vertical: true });
@@ -58,7 +58,7 @@ const ExtraPanels = new Lang.Class({
 	destroy : function(){
 
 		for (let i = 0; i < this.panels.length; i++) {
-            if (i == this.primaryIndex)
+			if (i == this.primaryIndex)
 				continue;
 			this.panels[i].actor.destroy();
 			this.panelBoxes = null;
@@ -95,30 +95,30 @@ const NewAppMenuButton = new Lang.Class({
 		
 	},
 	_onAppStateChanged: function(appSys, app) {
-        let state = app.state;
+		let state = app.state;
 
-        if (state != Shell.AppState.STARTING) {
+		if (state != Shell.AppState.STARTING) {
             this._startingApps = this._startingApps.filter(function(a) {
                 return a != app;
             });
-        } else if (state == Shell.AppState.STARTING && this.monitorIndex == this._getPointerMonitor() ) {
+		} else if (state == Shell.AppState.STARTING && this.monitorIndex == this._getPointerMonitor() ) {
             this._startingApps.push(app);
-        }
+		}
         // For now just resync on all running state changes; this is mainly to handle
         // cases where the focused window's application changes without the focus
         // changing.  An example case is how we map OpenOffice.org based on the window
         // title which is a dynamic property.
-        this._sync();
+		this._sync();
     },
 
 	_sync: function() {
-        let tracker = Shell.WindowTracker.get_default();
-        let focusedApp = tracker.focus_app;
+		let tracker = Shell.WindowTracker.get_default();
+		let focusedApp = tracker.focus_app;
 
 		
-        let lastStartedApp = null;
-        let workspace = global.screen.get_active_workspace();
-        for (let i = 0; i < this._startingApps.length; i++)
+		let lastStartedApp = null;
+		let workspace = global.screen.get_active_workspace();
+		for (let i = 0; i < this._startingApps.length; i++)
             if (this._startingApps[i].is_on_workspace(workspace))
                 lastStartedApp = this._startingApps[i];
 
@@ -142,7 +142,7 @@ const NewAppMenuButton = new Lang.Class({
 			};
 		}
 
-        if (targetApp == null) {
+		if (targetApp == null) {
             if (!this._targetIsCurrent)
                 return;
 
@@ -154,12 +154,12 @@ const NewAppMenuButton = new Lang.Class({
                                            time: Overview.ANIMATION_TIME,
                                            transition: 'easeOutQuad' });
             return;
-        }
+		}
 
-        if (!targetApp.is_on_workspace(workspace))
+		if (!targetApp.is_on_workspace(workspace))
             return;
 
-        if (!this._targetIsCurrent) {
+		if (!this._targetIsCurrent) {
             this.actor.reactive = true;
             this._targetIsCurrent = true;
 
@@ -167,50 +167,50 @@ const NewAppMenuButton = new Lang.Class({
             Tweener.addTween(this.actor, { opacity: 255,
                                            time: Overview.ANIMATION_TIME,
                                            transition: 'easeOutQuad' });
-        }
+		}
 
-        if (targetApp == this._targetApp) {
+		if (targetApp == this._targetApp) {
             if (targetApp && targetApp.get_state() != Shell.AppState.STARTING) {
                 this.stopAnimation();
                 this._maybeSetMenu();
             }
             return;
-        }
+		}
 
-        this._spinner.actor.hide();
-        if (this._iconBox.child != null)
+		this._spinner.actor.hide();
+		if (this._iconBox.child != null)
             this._iconBox.child.destroy();
-        this._iconBox.hide();
-        this._label.setText('');
+		this._iconBox.hide();
+		this._label.setText('');
 
-        if (this._appMenuNotifyId)
+		if (this._appMenuNotifyId)
             this._targetApp.disconnect(this._appMenuNotifyId);
-        if (this._actionGroupNotifyId)
+		if (this._actionGroupNotifyId)
             this._targetApp.disconnect(this._actionGroupNotifyId);
-        if (targetApp) {
+		if (targetApp) {
             this._appMenuNotifyId = targetApp.connect('notify::menu', Lang.bind(this, this._sync));
             this._actionGroupNotifyId = targetApp.connect('notify::action-group', Lang.bind(this, this._sync));
-        } else {
+		} else {
             this._appMenuNotifyId = 0;
             this._actionGroupNotifyId = 0;
-        }
+		}
 
-        this._targetApp = targetApp;
-        let icon = targetApp.get_faded_icon(2 * Panel.PANEL_ICON_SIZE);
+		this._targetApp = targetApp;
+		let icon = targetApp.get_faded_icon(2 * Panel.PANEL_ICON_SIZE);
 
-        this._label.setText(targetApp.get_name());
-        this.setName(targetApp.get_name());
+		this._label.setText(targetApp.get_name());
+		this.setName(targetApp.get_name());
 
-        this._iconBox.set_child(icon);
-        this._iconBox.show();
+		this._iconBox.set_child(icon);
+		this._iconBox.show();
 
-        if (targetApp.get_state() == Shell.AppState.STARTING)
+		if (targetApp.get_state() == Shell.AppState.STARTING)
             this.startAnimation();
-        else
+		else
             this._maybeSetMenu();
 
-        this.emit('changed');
-    }
+		this.emit('changed');
+	}
 });
 
 
@@ -222,28 +222,28 @@ function init() {
 
 function enable() {
 	log("Loading Extra Panels Extension");
-    let eP = new ExtraPanels();
+	let eP = new ExtraPanels();
 	Main.__eP = eP;
 	Main.panel._appMenus = [];
 
 	for (let i = 0; i < eP.monitors.length; i++) {	
-			let panel;	
+		let panel;	
             
-			if (i == eP.primaryIndex) {
-				panel = Main.panel;
-			} else {
-				panel = Main.__eP.panels[i];
+		if (i == eP.primaryIndex) {
+			panel = Main.panel;
+		} else {
+			panel = Main.__eP.panels[i];
+		}
+		let left_children = panel._leftBox.get_children();
+
+		left_children.forEach(function(lchild){
+			if (lchild._delegate instanceof Panel.AppMenuButton){
+				lchild.destroy();
 			}
-			let left_children = panel._leftBox.get_children();
+		});
 
-			left_children.forEach(function(lchild){
-				if (lchild._delegate instanceof Panel.AppMenuButton){
-						lchild.destroy();
-				}
-			});
-
-			Main.panel._appMenus[i] = new NewAppMenuButton(i);
-			panel._leftBox.add(Main.panel._appMenus[i].actor)
+		Main.panel._appMenus[i] = new NewAppMenuButton(i);
+		panel._leftBox.add(Main.panel._appMenus[i].actor)
 	}
 	//emit signal to force initial AppMenu sync
 	let tracker = Shell.WindowTracker.get_default();
