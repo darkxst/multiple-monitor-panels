@@ -234,16 +234,11 @@ function enable() {
         } else {
             panel = Main.__eP.panels[i];
         }
-        let left_children = panel._leftBox.get_children();
-
-        left_children.forEach(function(lchild){
-            if (lchild._delegate instanceof Panel.AppMenuButton){
-                lchild.destroy();
-            }
-        });
+        //Replace AppMenu
+        panel._appMenu.actor.destroy();
 
         Main.panel._appMenus[i] = new NewAppMenuButton(i);
-        panel._leftBox.add(Main.panel._appMenus[i].actor)
+        panel._leftBox.add(Main.panel._appMenus[i].actor);
     }
     //emit signal to force initial AppMenu sync
     let tracker = Shell.WindowTracker.get_default();
@@ -251,16 +246,15 @@ function enable() {
 }
 
 function disable() {
-    //dsetroy extra panels
+    //Destroy 
+    Main.panel._appMenus.forEach(function(appMenu){
+        global.display.disconnect(appMenu.grabSigId); 
+        appMenu.destroy();
+    });    
+    
     Main.__eP.destroy();
-    //replace on primary with original appMenu
-    let left_children = Main.panel._leftBox.get_children();
-    left_children.forEach(function(lchild){
-        if (lchild._delegate instanceof NewAppMenuButton){
-            global.display.disconnect(lchild._delegate.grabSigId);      
-            lchild.destroy();
-        }
-    });
+        
+    // Restore orignal AppMenu
     Main.panel._appMenu = new Panel.AppMenuButton(Main.panel._menus);
     Main.panel._leftBox.add(Main.panel._appMenu.actor);
     Main.panel._appMenus = null;
