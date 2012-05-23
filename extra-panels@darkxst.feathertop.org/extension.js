@@ -24,7 +24,8 @@ const Shell = imports.gi.Shell;
 const Tweener = imports.ui.tweener;
 const Overview = imports.ui.overview;
 const Meta = imports.gi.Meta;
-
+const Layout = imports.ui.layout;
+const Mainloop = imports.mainloop;
 
 const St = imports.gi.St;
 
@@ -52,7 +53,18 @@ const ExtraPanels = new Lang.Class({
             Main.layoutManager.panelBox.remove_actor(this.panels[i].actor);
             this.panelBoxes[i].add(this.panels[i].actor)
             this.panelBoxes[i].set_position(this.monitors[i].x, this.monitors[i].y);
+            this.panelBoxes[i].set_width(this.monitors[i].width);
+            this.panels[i]._activitiesButton._hotCorner.actor.set_position(this.monitors[i].x, this.monitors[i].y);
+            this._updateCorners(i);
+            let barrier_timeout = Mainloop.timeout_add(
+                        200,
+                        Lang.bind(this, function() {
+                            this._updateBarriers();
+                            Mainloop.source_remove(barrier_timeout);
+                            return true;
+                        }));
         }
+
         this.monSigId = Main.layoutManager.connect('monitors-changed', Lang.bind(this, this._updatePanels));
     },
     destroy : function(){
@@ -60,14 +72,43 @@ const ExtraPanels = new Lang.Class({
         for (let i = 0; i < this.panels.length; i++) {
             if (i == this.primaryIndex)
                 continue;
+
             this.panels[i].actor.destroy();
             this.panelBoxes = null;
+
+            if (this._leftPanelBarriers[i] > 0)
+                global.destroy_pointer_barrier(this._leftPanelBarriers[i]);
+            
+            this.panels[i]._hotCorner.actor.destroy();
         }
         Main.layoutManager.disconnect(this.monSigId);
     },
     _updatePanels : function(){
         this.destroy();
         this._init();
+    },
+    _updateCorners : function(monIndex){
+        let corner = new Layout.HotCorner();
+        Main.layoutManager._hotCorners.push(corner);
+        corner.actor.set_position(this.monitors[monIndex].x, this.monitors[monIndex].y);
+        Main.layoutManager._chrome.addActor(corner.actor);
+        this.panels[monIndex]._hotCorner = corner;
+    },
+    _updateBarriers : function(){
+        this._leftPanelBarriers = [];
+        for (let i=0; i < this.monitors.length;i++){
+            if (i == this.primaryIndex)
+                continue;
+
+            if (this._leftPanelBarriers[i] > 0)
+                global.destroy_pointer_barrier(this._leftPanelBarriers[i]);
+            // this assumes that panels are side-by-side, probably should check this and set dir=1 if not
+            let monitor = this.monitors[i];
+            this._leftPanelBarriers[i] =
+                global.create_pointer_barrier(monitor.x, monitor.y,
+                                              monitor.x, monitor.y + this.panelBoxes[i].height,
+                                              0 /*block in both X directions*/);
+        }
     }
 });
 
@@ -136,7 +177,6 @@ const NewAppMenuButton = new Lang.Class({
         
                 if (windows[i].get_monitor() == this.monitorIndex){
                     targetApp = tracker.get_window_app(windows[i]);
-                    //log(targetApp.get_name());
                     break;
                 }
             };
