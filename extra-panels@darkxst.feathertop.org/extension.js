@@ -16,6 +16,7 @@
 
 // Author: darkxst
 
+const Gio = imports.gi.Gio;
 const Panel = imports.ui.panel;
 const Main = imports.ui.main;
 const Lang = imports.lang;
@@ -26,17 +27,27 @@ const Overview = imports.ui.overview;
 const Meta = imports.gi.Meta;
 const Layout = imports.ui.layout;
 const Mainloop = imports.mainloop;
+const WorkspacesView = imports.ui.workspacesView;
 
 const St = imports.gi.St;
 
+const ExtensionSystem = imports.ui.extensionSystem;
+const ExtensionUtils = imports.misc.extensionUtils;
 
+const Me = ExtensionUtils.getCurrentExtension();
+const Convenience = Me.imports.convenience;
 
-let panels;
+//const extension = imports.misc.extensionUtils.getCurrentExtension();
+//const metadata = extension.metadata;
+
+let eP, Schema, panels;
 
 const ExtraPanels = new Lang.Class({
     Name: 'ExtraPanels',
 
     _init : function() {
+        Schema = Convenience.getSettings();
+        this.Schema = Schema;
         this.monitors = Main.layoutManager.monitors;
         this.primaryIndex = Main.layoutManager.primaryIndex;
         this.panelBoxes = [];
@@ -54,7 +65,7 @@ const ExtraPanels = new Lang.Class({
             this.panelBoxes[i].add(this.panels[i].actor)
             this.panelBoxes[i].set_position(this.monitors[i].x, this.monitors[i].y);
             this.panelBoxes[i].set_width(this.monitors[i].width);
-            this.panels[i]._activitiesButton._hotCorner.actor.set_position(this.monitors[i].x, this.monitors[i].y);
+
             this._updateCorners(i);
             let barrier_timeout = Mainloop.timeout_add(
                         200,
@@ -63,26 +74,14 @@ const ExtraPanels = new Lang.Class({
                             Mainloop.source_remove(barrier_timeout);
                             return true;
                         }));
+            Schema.bind('display-clock', this.panels[i]._dateMenu.actor, 'visible', Gio.SettingsBindFlags.GET);
+            Schema.bind('display-activities', this.panels[i]._activities, 'visible', Gio.SettingsBindFlags.GET);
+      
         }
 
         this.monSigId = Main.layoutManager.connect('monitors-changed', Lang.bind(this, this._updatePanels));
     },
-    destroy : function(){
-
-        for (let i = 0; i < this.panels.length; i++) {
-            if (i == this.primaryIndex)
-                continue;
-
-            this.panels[i].actor.destroy();
-            this.panelBoxes = null;
-
-            if (this._leftPanelBarriers[i] > 0)
-                global.destroy_pointer_barrier(this._leftPanelBarriers[i]);
-            
-            this.panels[i]._hotCorner.actor.destroy();
-        }
-        Main.layoutManager.disconnect(this.monSigId);
-    },
+    
     _updatePanels : function(){
         this.destroy();
         this._init();
@@ -109,6 +108,167 @@ const ExtraPanels = new Lang.Class({
                                               monitor.x, monitor.y + this.panelBoxes[i].height,
                                               0 /*block in both X directions*/);
         }
+    },
+    destroy : function(){
+
+        for (let i = 0; i < this.panels.length; i++) {
+            if (i == this.primaryIndex)
+                continue;
+
+            this.panels[i].actor.destroy();
+            this.panelBoxes = null;
+
+            if (this._leftPanelBarriers[i] > 0)
+                global.destroy_pointer_barrier(this._leftPanelBarriers[i]);
+            
+            this.panels[i]._hotCorner.actor.destroy();
+        }
+        Main.layoutManager.disconnect(this.monSigId);
+    }
+});
+
+const HijackPanelButton = new Lang.Class({
+    Name: 'HijackPanelButton',
+
+    _init: function(){
+        //might need to add timer here, to run initial update after shell startup.
+
+        //target monitor for moving icons
+        let monitors = Main.layoutManager.monitors;
+        let primaryIndex = Main.layoutManager.primaryIndex;
+        
+        for (let i = 0; i < monitors.length; i++) {
+            if (i == primaryIndex)
+                continue;
+            this.iconTarget = i;
+            break;
+        }
+
+        //connect to settings
+        this.messageId = ExtensionSystem.connect('extension-state-changed',
+                                Lang.bind(this, this._updateIcons));
+
+        this.settingsId = Schema.connect('changed::available-list',
+                                Lang.bind(this, this._reorderIcons));
+        
+        this.wmIcons = [];
+        this.icons = [];
+    },
+    _updateIcons: function(obj,extension){
+
+        this.icons.push(extension);
+        if (extension.state == ExtensionSystem.ExtensionState.ENABLED){
+
+            //we have no way of determing which icons belong to an extension
+            //so we just scan all non-system icons
+            this._moveStatusIcon();
+        } else if (extension.state == ExtensionSystem.ExtensionState.DISABLED){
+            this.wmIcons = [];
+            this._moveStatusIcon();
+        }
+        
+    },
+    _reorderIcons: function(){
+
+        //this.wmIcons = [];
+        this._returnIcons();
+        this._moveIcons();
+    },
+    
+    _moveStatusIcon: function(){
+
+        this._findIcons();
+        this._moveIcons();
+    },
+    _moveIcons: function(){
+        let statusArea = Main.panel._statusArea;
+
+        let containers = ['_leftBox','_centerBox','_rightBox'];
+        let available = Schema.get_strv('available-list');
+        //this.wmIcons = [];
+        for (let i in available){
+            let icon = available[i];
+
+            let o = statusArea[icon];
+            if (o && !this._isBlackList(icon) && this.wmIcons.indexOf(icon) == -1){
+                this.wmIcons.push(icon)
+
+                for (let j in containers){
+                    let box = containers[j]
+                    
+                    if (Main.panel[box] == o.actor.get_parent()){
+                        let target = Main.__eP.panels[this.iconTarget][box];
+                        //find index to insert at
+                        let idx = parseInt(i);
+                        for (let next = idx+1; next <= available.length; next++){
+                            let next_o = statusArea[available[next]];
+                            let temp_index = (next_o)?target.get_children().indexOf(next_o.actor):-1;
+
+                            if ( temp_index != -1){
+                                idx = temp_index ;
+                                break;
+                            } else if (next == available.length){
+                                idx = target.get_children().length;
+                            }
+
+                        }
+
+                        Main.panel[box].remove_actor(o.actor);
+                        Main.__eP.panels[this.iconTarget][box].insert_child_at_index(o.actor,idx);
+                    }
+                } 
+            }
+        }
+    },
+    _findIcons: function(){
+        
+        let statusArea = Main.panel._statusArea;
+        let sysIcons = Main.panel._status_area_order;
+        
+        for (let i in statusArea){
+            if (!this._isBlackList(i) && sysIcons.indexOf(i) == -1 ){   
+                this._updateAvailable(i);
+            }
+        }
+    },
+    _updateAvailable: function(icon){
+        let changed = false;
+        let available = Schema.get_strv('available-list');
+
+        if (available.indexOf(icon) == -1){
+            available.push(icon);
+            changed = true;
+        }
+            //save available extensions/widgets into the schema.
+        if (changed)
+            Schema.set_strv('available-list', available);
+    },
+    _isBlackList: function(icon){
+        let blackList = Schema.get_strv('black-list');
+        return (blackList.indexOf(icon) != -1)?true:false;
+    },
+    _returnIcons: function(){
+        //return in hijack icons to primary panel 
+        let containers = ['_leftBox','_centerBox','_rightBox'];
+        for (let i in this.wmIcons){
+
+                let o = Main.panel._statusArea[this.wmIcons[i]];
+                for (let j in containers){
+                        if (Main.__eP.panels[this.iconTarget][containers[j]] == o.actor.get_parent()){
+                            log("restoring");
+                            Main.__eP.panels[this.iconTarget][containers[j]].remove_actor(o.actor);
+                            Main.panel[containers[j]].add_actor(o.actor);
+                        }
+                }
+            }
+        this.wmIcons = [];
+    },
+    destroy: function(){
+        ExtensionSystem.disconnect(this.messageId);
+        Schema.disconnect(this.settingsId);
+
+        this._returnIcons();
+        
     }
 });
 
@@ -121,6 +281,7 @@ const NewAppMenuButton = new Lang.Class({
         this.monitorIndex = monitorIndex;
         this.lastFocusedApp = Shell.WindowTracker.get_default().focus_app;
         this.grabSigId = global.display.connect('grab-op-end', Lang.bind(this, this._sync));
+        Schema.bind('display-appmenu', this.actor, 'visible', Gio.SettingsBindFlags.GET);
 
     },
     _getPointerMonitor: function() {
@@ -253,17 +414,80 @@ const NewAppMenuButton = new Lang.Class({
     }
 });
 
+function injectToFunction(parent, name, func) {
+    let origin = parent[name];
+    parent[name] = function() {
+        let ret;
+        ret = origin.apply(this, arguments);
+        if (ret === undefined)
+                ret = func.apply(this, arguments);
+        return ret;
+    }
+    return origin;
+}
+
+function removeInjection(object, injection, name) {
+    if (injection[name] === undefined)
+        delete object[name];
+    else
+        object[name] = injection[name];
+}
+
+const workspacesPatch = new Lang.Class({
+    Name: 'workspacesPatch',
+
+    _init: function(){
+        this.wsDispInjection = {};
+        this.wsDispInjection['_updateWorkspacesGeometry'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, '_updateWorkspacesGeometry',
+            function() {
+                let thisParent = Main.overview._workspacesDisplay;
+                
+                if (!thisParent._workspacesViews)
+                    return;
+                
+                let panelHeight = Main.panel.actor.height;
+                let monitors = Main.layoutManager.monitors;
+
+                let m = 0;
+
+                for (let i = 0; i < monitors.length; i++) {
+                    if (i == this._primaryIndex) {
+                        m++;
+                    }else if (!thisParent._workspacesOnlyOnPrimary && i != thisParent._primaryIndex ) {
+                        thisParent._workspacesViews[m].setClipRect(monitors[i].x,
+                                                                   monitors[i].y + panelHeight,
+                                                                   monitors[i].width,
+                                                                   monitors[i].height - panelHeight);
+                        thisParent._workspacesViews[m].setGeometry(monitors[i].x,
+                                                                   monitors[i].y + panelHeight,
+                                                                   monitors[i].width,
+                                                                   monitors[i].height - panelHeight, 0);
+                        m++;
+                    }
+                }
+        });
+    },
+    destroy: function(){
+        for (i in this.wsDispInjection) {
+            removeInjection(WorkspacesView.WorkspacesDisplay.prototype, this.wsDispInjection, i);
+        }
+        this.wsDispInjection = {};
+    }
+
+});
 
 
 function init() {
-
-    /*do nothing*/
+    //let me = extension.imports.convenience;
+    //me.initTranslations(extension);
 }
 
 function enable() {
     log("Loading Extra Panels Extension");
-    let eP = new ExtraPanels();
+    eP = new ExtraPanels();
     Main.__eP = eP;
+    eP.workspacePatch = new workspacesPatch();
+    eP.hijack = new HijackPanelButton();
     Main.panel._appMenus = [];
 
     for (let i = 0; i < eP.monitors.length; i++) {  
@@ -272,7 +496,7 @@ function enable() {
         if (i == eP.primaryIndex) {
             panel = Main.panel;
         } else {
-            panel = Main.__eP.panels[i];
+            panel = eP.panels[i];
         }
         //Replace AppMenu
         panel._appMenu.actor.destroy();
@@ -282,22 +506,30 @@ function enable() {
     }
     //emit signal to force initial AppMenu sync
     let tracker = Shell.WindowTracker.get_default();
-    tracker.emit('notify::focus-app', tracker.focus_app);
+    //tracker.emit('notify::focus-app', tracker.focus_app);
+    tracker.emit('notify::focus-app', null);
+    
 }
+
 
 function disable() {
     //Destroy 
     Main.panel._appMenus.forEach(function(appMenu){
         global.display.disconnect(appMenu.grabSigId); 
         appMenu.destroy();
-    });    
+    });
+    eP.hijack.destroy();    
+    eP.workspacePatch.destroy();
     
-    Main.__eP.destroy();
+    eP.destroy();
         
     // Restore orignal AppMenu
     Main.panel._appMenu = new Panel.AppMenuButton(Main.panel._menus);
     Main.panel._leftBox.add(Main.panel._appMenu.actor);
     Main.panel._appMenus = null;
     Main.__eP = null;
+
+
+    Schema.run_dispose();
 
 }

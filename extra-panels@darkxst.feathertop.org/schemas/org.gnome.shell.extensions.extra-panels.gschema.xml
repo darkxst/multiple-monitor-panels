@@ -1,0 +1,30 @@
+<schemalist gettext-domain="gnome-shell-extensions">
+  <schema id="org.gnome.shell.extensions.extra-panels" path="/org/gnome/shell/extensions/extra-panels/">
+    <key name="available-list" type="as">
+      <default>[ ]</default>
+      <summary>A list of detected extensions</summary>
+      <description>A list of detected extensions that are compatible with the icon hijacking</description>
+    </key>
+    <key name="black-list" type="as">
+      <default>[ ]</default>
+      <summary>A list of extensions that wont be moved</summary>
+      <description>A list of extensions for for which icon hijacking is disabled. 
+        This is here so we have a persistant list of these when extensions might be disabled.</description>
+    </key>
+    <key name="display-clock" type="b">
+      <default>false</default>
+      <summary>Display Clock on Secondary Monitors</summary>
+      <description>Set to false to remove clock from additional monitors</description>
+    </key>
+    <key name="display-activities" type="b">
+      <default>true</default>
+      <summary>Display Activities Button on Secondary Monitors</summary>
+      <description>Set to false to remove activities button from additional monitors</description>
+    </key>
+    <key name="display-appmenu" type="b">
+      <default>true</default>
+      <summary>Display AppMenu</summary>
+      <description>Set to false to remove appMenus</description>
+    </key>
+  </schema>
+</schemalist>

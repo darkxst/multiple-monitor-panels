@@ -1,6 +1,8 @@
 {
 	"shell-version": ["3.4"],
 	"uuid": "extra-panels@darkxst.feathertop.org",
+	"settings-schema": "org.gnome.shell.extensions.extra-panels",
+	"gettext-domain": "multiple-monitor-panels", 
 	"name": "Multiple Monitor Panels",
 	"description": "Add panels on all secondary monitors",
 	"url": "https://github.com/darkxst/multiple-monitor-panels.git"
