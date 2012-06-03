@@ -16,26 +16,27 @@
 
 // Author: darkxst
 
+const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
-const Panel = imports.ui.panel;
-const Main = imports.ui.main;
 const Lang = imports.lang;
-
-const Shell = imports.gi.Shell;
-const Tweener = imports.ui.tweener;
-const Overview = imports.ui.overview;
-const Meta = imports.gi.Meta;
 const Layout = imports.ui.layout;
+const Main = imports.ui.main;
 const Mainloop = imports.mainloop;
-const WorkspacesView = imports.ui.workspacesView;
-
+const Meta = imports.gi.Meta;
+const Overview = imports.ui.overview;
+const Panel = imports.ui.panel;
+const Shell = imports.gi.Shell;
 const St = imports.gi.St;
+const Tweener = imports.ui.tweener;
+const WorkspacesView = imports.ui.workspacesView;
 
 const ExtensionSystem = imports.ui.extensionSystem;
 const ExtensionUtils = imports.misc.extensionUtils;
 
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
+const WorkspaceThumbnails = Me.imports.thumbnails;
+//const WT = imports.ui.workspaceThumbnail;
 
 //const extension = imports.misc.extensionUtils.getCurrentExtension();
 //const metadata = extension.metadata;
@@ -52,6 +53,7 @@ const ExtraPanels = new Lang.Class({
         this.primaryIndex = Main.layoutManager.primaryIndex;
         this.panelBoxes = [];
         this.panels = [];
+        this.thumbnails = [];
         Main.layoutManager.panelBoxes = this.panelBoxes;
         
         for (let i = 0; i < this.monitors.length; i++) {
@@ -74,12 +76,17 @@ const ExtraPanels = new Lang.Class({
                             Mainloop.source_remove(barrier_timeout);
                             return true;
                         }));
+
+            this.thumbnails[i] = new WorkspaceThumbnails.Thumbnails();
+            global.overlay_group.add_actor(this.thumbnails[i].actor);
+
             Schema.bind('display-clock', this.panels[i]._dateMenu.actor, 'visible', Gio.SettingsBindFlags.GET);
             Schema.bind('display-activities', this.panels[i]._activities, 'visible', Gio.SettingsBindFlags.GET);
       
         }
 
         this.monSigId = Main.layoutManager.connect('monitors-changed', Lang.bind(this, this._updatePanels));
+        
     },
     
     _updatePanels : function(){
@@ -126,6 +133,7 @@ const ExtraPanels = new Lang.Class({
         Main.layoutManager.disconnect(this.monSigId);
     }
 });
+
 
 const HijackPanelButton = new Lang.Class({
     Name: 'HijackPanelButton',
@@ -312,7 +320,7 @@ const NewAppMenuButton = new Lang.Class({
         // title which is a dynamic property.
         this._sync();
     },
-
+    //mostly copied from the shell appMenu Code
     _sync: function() {
         let tracker = Shell.WindowTracker.get_default();
         let focusedApp = tracker.focus_app;
@@ -438,6 +446,7 @@ const workspacesPatch = new Lang.Class({
 
     _init: function(){
         this.wsDispInjection = {};
+
         this.wsDispInjection['_updateWorkspacesGeometry'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, '_updateWorkspacesGeometry',
             function() {
                 let thisParent = Main.overview._workspacesDisplay;
@@ -446,6 +455,7 @@ const workspacesPatch = new Lang.Class({
                     return;
                 
                 let panelHeight = Main.panel.actor.height;
+                let resWidth = Main.overview._workspacesDisplay._controls.get_width();
                 let monitors = Main.layoutManager.monitors;
 
                 let m = 0;
@@ -454,15 +464,35 @@ const workspacesPatch = new Lang.Class({
                     if (i == this._primaryIndex) {
                         m++;
                     }else if (!thisParent._workspacesOnlyOnPrimary && i != thisParent._primaryIndex ) {
-                        thisParent._workspacesViews[m].setClipRect(monitors[i].x,
+                        thisParent._workspacesViews[m].setClipRect(monitors[i].x + resWidth,
                                                                    monitors[i].y + panelHeight,
-                                                                   monitors[i].width,
+                                                                   monitors[i].width - resWidth,
                                                                    monitors[i].height - panelHeight);
-                        thisParent._workspacesViews[m].setGeometry(monitors[i].x,
+                        thisParent._workspacesViews[m].setGeometry(monitors[i].x + resWidth,
                                                                    monitors[i].y + panelHeight,
-                                                                   monitors[i].width,
+                                                                   monitors[i].width - resWidth ,
                                                                    monitors[i].height - panelHeight, 0);
                         m++;
+                    }
+                }
+        });
+        this.wsDispInjection['show'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, 'show',
+            function(){
+                let monitors = Main.layoutManager.monitors;
+                for (let i = 0; i < monitors.length; i++) {
+                    if (i != this._primaryIndex) {
+                        eP.thumbnails[i]._controls.show();
+                        eP.thumbnails[i]._thumbnailsBox.show();
+                    }
+                }
+        });
+        this.wsDispInjection['hide'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, 'hide',
+            function(){
+                let monitors = Main.layoutManager.monitors;
+                for (let i = 0; i < monitors.length; i++) {
+                    if (i != this._primaryIndex) {
+                        eP.thumbnails[i]._controls.hide();
+                        eP.thumbnails[i]._thumbnailsBox.hide();
                     }
                 }
         });
@@ -472,6 +502,7 @@ const workspacesPatch = new Lang.Class({
             removeInjection(WorkspacesView.WorkspacesDisplay.prototype, this.wsDispInjection, i);
         }
         this.wsDispInjection = {};
+
     }
 
 });
