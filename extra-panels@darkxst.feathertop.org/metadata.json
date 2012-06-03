@@ -4,6 +4,6 @@
 	"settings-schema": "org.gnome.shell.extensions.extra-panels",
 	"gettext-domain": "multiple-monitor-panels", 
 	"name": "Multiple Monitor Panels",
-	"description": "Add panels on all secondary monitors",
+	"description": "Add top panels including a monitor specific appMenu, on all extra monitors. Now also has support for moving most icons/widgets from other extensions to the secondary monitor panel and display of workspace switcher thumbnails on additional monitors",
 	"url": "https://github.com/darkxst/multiple-monitor-panels.git"
 }
