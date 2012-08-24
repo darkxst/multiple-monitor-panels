@@ -109,7 +109,7 @@ const Thumbnails = new Lang.Class({
                 // This is kinda hackish - we want the primary view to
                 // appear as parent of this.actor, though in reality it
                 // is added directly to overlay_group
-                this._notifyOpacityId = newParent.connect('notify::opacity',
+                /*this._notifyOpacityId = newParent.connect('notify::opacity',
                     Lang.bind(this, function() {
                         let opacity = this.actor.get_parent().opacity;
                         let primaryView = this._getPrimaryView();
@@ -120,7 +120,7 @@ const Thumbnails = new Lang.Class({
                             primaryView.actor.hide();
                         else
                             primaryView.actor.show();
-                    }));
+                    }));*/
         }));
     },
 });

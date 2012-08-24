@@ -78,7 +78,8 @@ const ExtraPanels = new Lang.Class({
                         }));
 
             this.thumbnails[i] = new WorkspaceThumbnails.Thumbnails();
-            global.overlay_group.add_actor(this.thumbnails[i].actor);
+            //global.overlay_group.add_actor(this.thumbnails[i].actor);
+            Main.overview._group.add_actor(this.thumbnails[i].actor);
 
             Schema.bind('display-clock', this.panels[i]._dateMenu.actor, 'visible', Gio.SettingsBindFlags.GET);
             Schema.bind('display-activities', this.panels[i]._activities, 'visible', Gio.SettingsBindFlags.GET);
@@ -86,6 +87,7 @@ const ExtraPanels = new Lang.Class({
         }
 
         this.monSigId = Main.layoutManager.connect('monitors-changed', Lang.bind(this, this._updatePanels));
+        //we need to rename extra the top bars in Main.ctrlAltTabManager._items[5].name = "Top Bar 2"
         
     },
     
@@ -199,8 +201,8 @@ const HijackPanelButton = new Lang.Class({
 
             let o = statusArea[icon];
             if (o && !this._isBlackList(icon) && this.wmIcons.indexOf(icon) == -1){
-                this.wmIcons.push(icon)
-
+                this.wmIcons.push(icon);
+                log(icon);
                 for (let j in containers){
                     let box = containers[j]
                     
@@ -231,7 +233,11 @@ const HijackPanelButton = new Lang.Class({
     _findIcons: function(){
         
         let statusArea = Main.panel._statusArea;
+        //3.4
         let sysIcons = Main.panel._status_area_order;
+        //3.6 
+        if (sysIcons == undefined)
+            sysIcons = Main.sessionMode.statusArea.order
         
         for (let i in statusArea){
             if (!this._isBlackList(i) && sysIcons.indexOf(i) == -1 ){   

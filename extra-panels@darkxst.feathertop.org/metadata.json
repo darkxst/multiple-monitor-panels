@@ -1,5 +1,5 @@
 {
-	"shell-version": ["3.4"],
+	"shell-version": ["3.4","3.5.4"],
 	"uuid": "extra-panels@darkxst.feathertop.org",
 	"settings-schema": "org.gnome.shell.extensions.extra-panels",
 	"gettext-domain": "multiple-monitor-panels", 
