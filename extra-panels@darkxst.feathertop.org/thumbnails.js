@@ -25,7 +25,11 @@ const Thumbnails = new Lang.Class({
     _init: function(){
         this._controls = null;
         this.monitorIndex = 1;
-        Main.overview._workspacesDisplay._controls2 = this._controls;
+        try {
+            Main.overview._workspacesDisplay._controls2 = this._controls;
+        } catch(e) {
+            Main.overview._viewSelector._workspacesDisplay._controls2 = this._controls;
+        }
         let monitor = Main.layoutManager.monitors[this.monitorIndex];
 
         this.actor = new Shell.GenericContainer();

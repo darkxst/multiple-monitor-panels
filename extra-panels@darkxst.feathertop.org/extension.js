@@ -76,13 +76,13 @@ const ExtraPanels = new Lang.Class({
                             Mainloop.source_remove(barrier_timeout);
                             return true;
                         }));
-
-            this.thumbnails[i] = new WorkspaceThumbnails.Thumbnails();
+            //Load Thumnails
+            //this.thumbnails[i] = new WorkspaceThumbnails.Thumbnails();
             //global.overlay_group.add_actor(this.thumbnails[i].actor);
-            Main.overview._group.add_actor(this.thumbnails[i].actor);
+            //Main.overview._group.add_actor(this.thumbnails[i].actor);
 
-            Schema.bind('display-clock', this.panels[i]._dateMenu.actor, 'visible', Gio.SettingsBindFlags.GET);
-            Schema.bind('display-activities', this.panels[i]._activities, 'visible', Gio.SettingsBindFlags.GET);
+            Schema.bind('display-clock', this.panels[i].statusArea.dateMenu.actor, 'visible', Gio.SettingsBindFlags.GET);
+            Schema.bind('display-activities', this.panels[i].statusArea.activities.actor, 'visible', Gio.SettingsBindFlags.GET);
       
         }
 
@@ -163,6 +163,11 @@ const HijackPanelButton = new Lang.Class({
         
         this.wmIcons = [];
         this.icons = [];
+
+        this.statusArea = Main.panel._statusArea;
+        if (this.statusArea == undefined)
+            this.statusArea = Main.panel.statusArea;
+
     },
     _updateIcons: function(obj,extension){
 
@@ -191,28 +196,26 @@ const HijackPanelButton = new Lang.Class({
         this._moveIcons();
     },
     _moveIcons: function(){
-        let statusArea = Main.panel._statusArea;
-
         let containers = ['_leftBox','_centerBox','_rightBox'];
         let available = Schema.get_strv('available-list');
         //this.wmIcons = [];
         for (let i in available){
             let icon = available[i];
 
-            let o = statusArea[icon];
+            let o = this.statusArea[icon];
             if (o && !this._isBlackList(icon) && this.wmIcons.indexOf(icon) == -1){
                 this.wmIcons.push(icon);
-                log(icon);
+
                 for (let j in containers){
                     let box = containers[j]
                     
-                    if (Main.panel[box] == o.actor.get_parent()){
+                    if (Main.panel[box] == o.container.get_parent()){
                         let target = Main.__eP.panels[this.iconTarget][box];
                         //find index to insert at
                         let idx = parseInt(i);
                         for (let next = idx+1; next <= available.length; next++){
-                            let next_o = statusArea[available[next]];
-                            let temp_index = (next_o)?target.get_children().indexOf(next_o.actor):-1;
+                            let next_o = this.statusArea[available[next]];
+                            let temp_index = (next_o)?target.get_children().indexOf(next_o.container):-1;
 
                             if ( temp_index != -1){
                                 idx = temp_index ;
@@ -223,24 +226,28 @@ const HijackPanelButton = new Lang.Class({
 
                         }
 
-                        Main.panel[box].remove_actor(o.actor);
-                        Main.__eP.panels[this.iconTarget][box].insert_child_at_index(o.actor,idx);
+                        Main.panel[box].remove_actor(o.container);
+                        Main.__eP.panels[this.iconTarget][box].insert_child_at_index(o.container,idx);
                     }
                 } 
             }
         }
     },
     _findIcons: function(){
-        
-        let statusArea = Main.panel._statusArea;
         //3.4
         let sysIcons = Main.panel._status_area_order;
-        //3.6 
+        //3.6
         if (sysIcons == undefined)
-            sysIcons = Main.sessionMode.statusArea.order
-        
-        for (let i in statusArea){
-            if (!this._isBlackList(i) && sysIcons.indexOf(i) == -1 ){   
+            sysIcons = Main.sessionMode.panel;
+        let sysIconsList = [];
+        for (let i in sysIcons){
+            sysIcons[i].forEach(function(icon){
+                sysIconsList.push(icon);
+            });
+        }
+
+        for (let i in this.statusArea){
+            if (!this._isBlackList(i) && sysIconsList.indexOf(i) == -1 ){
                 this._updateAvailable(i);
             }
         }
@@ -266,7 +273,7 @@ const HijackPanelButton = new Lang.Class({
         let containers = ['_leftBox','_centerBox','_rightBox'];
         for (let i in this.wmIcons){
 
-                let o = Main.panel._statusArea[this.wmIcons[i]];
+                let o = this.statusArea[this.wmIcons[i]];
                 for (let j in containers){
                         if (Main.__eP.panels[this.iconTarget][containers[j]] == o.actor.get_parent()){
                             log("restoring");
@@ -290,8 +297,8 @@ const NewAppMenuButton = new Lang.Class({
     Name: 'NewAppMenuButton',
     Extends: Panel.AppMenuButton,
 
-    _init: function(monitorIndex){
-        this.parent(Main.panel._menus);
+    _init: function(monitorIndex, panel){
+        this.parent(panel);
         this.monitorIndex = monitorIndex;
         this.lastFocusedApp = Shell.WindowTracker.get_default().focus_app;
         this.grabSigId = global.display.connect('grab-op-end', Lang.bind(this, this._sync));
@@ -453,15 +460,20 @@ const workspacesPatch = new Lang.Class({
     _init: function(){
         this.wsDispInjection = {};
 
+        //probably should use wrapFunction here
+        //this.prototype.dynamic_method = this.wrapFunction('dynamic_method', function(){});
         this.wsDispInjection['_updateWorkspacesGeometry'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, '_updateWorkspacesGeometry',
             function() {
-                let thisParent = Main.overview._workspacesDisplay;
-                
+                /*try {
+                    let thisParent = Main.overview._workspacesDisplay;
+                } catch(e) {}
+                if (thisParent == undefined)*/
+                let thisParent = Main.overview._viewSelector._workspacesDisplay;
                 if (!thisParent._workspacesViews)
                     return;
                 
                 let panelHeight = Main.panel.actor.height;
-                let resWidth = Main.overview._workspacesDisplay._controls.get_width();
+                let resWidth = thisParent._controls.get_width();
                 let monitors = Main.layoutManager.monitors;
 
                 let m = 0;
@@ -487,8 +499,8 @@ const workspacesPatch = new Lang.Class({
                 let monitors = Main.layoutManager.monitors;
                 for (let i = 0; i < monitors.length; i++) {
                     if (i != this._primaryIndex) {
-                        eP.thumbnails[i]._controls.show();
-                        eP.thumbnails[i]._thumbnailsBox.show();
+                        //eP.thumbnails[i]._controls.show();
+                        //eP.thumbnails[i]._thumbnailsBox.show();
                     }
                 }
         });
@@ -497,8 +509,8 @@ const workspacesPatch = new Lang.Class({
                 let monitors = Main.layoutManager.monitors;
                 for (let i = 0; i < monitors.length; i++) {
                     if (i != this._primaryIndex) {
-                        eP.thumbnails[i]._controls.hide();
-                        eP.thumbnails[i]._thumbnailsBox.hide();
+                        //eP.thumbnails[i]._controls.hide();
+                        //eP.thumbnails[i]._thumbnailsBox.hide();
                     }
                 }
         });
@@ -514,7 +526,7 @@ const workspacesPatch = new Lang.Class({
 });
 
 
-function init() {
+function init(){
     //let me = extension.imports.convenience;
     //me.initTranslations(extension);
 }
@@ -536,10 +548,10 @@ function enable() {
             panel = eP.panels[i];
         }
         //Replace AppMenu
-        panel._appMenu.actor.destroy();
-
-        Main.panel._appMenus[i] = new NewAppMenuButton(i);
-        panel._leftBox.add(Main.panel._appMenus[i].actor);
+        panel.statusArea.appMenu.actor.destroy();
+        Main.panel._appMenus[i] = new NewAppMenuButton(i,panel);
+        panel._leftBox.add(Main.panel._appMenus[i].container);
+        //panel.addToStatusArea('appMenu', Main.panel._appMenus[i].container,0,left);
     }
     //emit signal to force initial AppMenu sync
     let tracker = Shell.WindowTracker.get_default();
@@ -556,13 +568,13 @@ function disable() {
         appMenu.destroy();
     });
     eP.hijack.destroy();    
-    eP.workspacePatch.destroy();
+    //eP.workspacePatch.destroy();
     
     eP.destroy();
         
     // Restore orignal AppMenu
-    Main.panel._appMenu = new Panel.AppMenuButton(Main.panel._menus);
-    Main.panel._leftBox.add(Main.panel._appMenu.actor);
+    Main.panel.statusArea.appMenu = new Panel.AppMenuButton(Main.panel._menus);
+    Main.panel._leftBox.add(Main.panel.statusArea.appMenu.actor);
     Main.panel._appMenus = null;
     Main.__eP = null;
 
