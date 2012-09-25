@@ -94,7 +94,6 @@ const ExtraPanels = new Lang.Class({
 
         this.monSigId = Main.layoutManager.connect('monitors-changed', Lang.bind(this, this._updatePanels));
         //we need to rename extra the top bars in Main.ctrlAltTabManager._items[5].name = "Top Bar 2"
-        
     },
     
     _updatePanels : function(){
@@ -562,8 +561,7 @@ function enable() {
     //emit signal to force initial AppMenu sync
     let tracker = Shell.WindowTracker.get_default();
     //tracker.emit('notify::focus-app', tracker.focus_app);
-    tracker.emit('notify::focus-app', null);
-    
+    tracker.emit('notify::focus-app', null);    
 }
 
 
@@ -589,7 +587,5 @@ function disable() {
     Main.panel._appMenus = null;
     Main.__eP = null;
 
-
     Schema.run_dispose();
-
 }

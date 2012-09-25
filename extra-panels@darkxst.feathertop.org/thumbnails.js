@@ -25,6 +25,7 @@ const Thumbnails = new Lang.Class({
     _init: function(){
         this._controls = null;
         this.monitorIndex = 1;
+
         this._workspacesDisplay = Main.overview._workspacesDisplay;
         if (this._workspaceDisplay == undefined)
             this._workspacesDisplay = Main.overview._viewSelector._workspacesDisplay;
@@ -37,8 +38,10 @@ const Thumbnails = new Lang.Class({
         this.actor.connect('get-preferred-width', Lang.bind(this, this._getPreferredWidth));
         this.actor.connect('get-preferred-height', Lang.bind(this, this._getPreferredHeight));
         this.actor.connect('allocate', Lang.bind(this, this._allocate));
+
         //need to add the following
         //this.actor.connect('notify::mapped', Lang.bind(this, this._setupSwipeScrolling));
+
         this.actor.connect('parent-set', Lang.bind(this, this._parentSet));
 
         this.actor.set_position(monitor.x, monitor.y);
@@ -68,6 +71,7 @@ const Thumbnails = new Lang.Class({
     _getPreferredHeight: function (actor, forWidth, alloc) {
         // pass through the call in case the child needs it, but report 0x0
         //this._controls[this.monitorIndex].get_preferred_height(forWidth);
+
         this._workspacesDisplay._controls.get_preferred_height(forWidth);
     },
 
@@ -75,6 +79,7 @@ const Thumbnails = new Lang.Class({
         let monitor = Main.layoutManager.monitors[this.monitorIndex];
 
         let x,y,width,height;
+
         [width,height] = this._workspacesDisplay._controls.get_size();
         [x,y] = this._workspacesDisplay._controls.get_transformed_position();
         
