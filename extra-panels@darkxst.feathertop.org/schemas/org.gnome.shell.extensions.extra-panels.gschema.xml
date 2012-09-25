@@ -26,5 +26,10 @@
       <summary>Display AppMenu</summary>
       <description>Set to false to remove appMenus</description>
     </key>
+    <key name="display-sysicons" type="b">
+      <default>false</default>
+      <summary>Display status Icons</summary>
+      <description>Set to true to display system status icons on extra panels</description>
+    </key>
   </schema>
 </schemalist>

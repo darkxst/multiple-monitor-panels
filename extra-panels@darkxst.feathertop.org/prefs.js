@@ -161,7 +161,9 @@ const SettingsWidget = new GObject.Class({
         this._settings.bind('display-clock', clock, 'active', Gio.SettingsBindFlags.DEFAULT);
 
         let activities = new Gtk.CheckButton({  label:_('Display Activities'),
-                                                margin: 5
+                                                margin_left: 5,
+                                                /*margin_top: 5,*/
+                                                margin_bottom: 5
                                             });
         this.add(activities);
         this._settings.bind('display-activities', activities, 'active', Gio.SettingsBindFlags.DEFAULT);
@@ -169,10 +171,18 @@ const SettingsWidget = new GObject.Class({
         let appmenu = new Gtk.CheckButton({  label:_('Display App Menus'),
                                                 margin_left: 5,
                                                 /*margin_top: 5,*/
-                                                margin_bottom: 20
+                                                margin_bottom: 5
                                             });
         this.add(appmenu);
         this._settings.bind('display-appmenu', appmenu, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        let sysIcons = new Gtk.CheckButton({  label:_('Display Status Icons'),
+                                                margin_left: 5,
+                                                /*margin_top: 5,*/
+                                                margin_bottom: 20
+                                            });
+        this.add(sysIcons);
+        this._settings.bind('display-sysicons', sysIcons, 'active', Gio.SettingsBindFlags.DEFAULT);
 
         let seperator = new Gtk.HSeparator();
         this.add(seperator);

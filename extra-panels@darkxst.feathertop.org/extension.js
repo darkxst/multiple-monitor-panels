@@ -83,7 +83,13 @@ const ExtraPanels = new Lang.Class({
 
             Schema.bind('display-clock', this.panels[i].statusArea.dateMenu.actor, 'visible', Gio.SettingsBindFlags.GET);
             Schema.bind('display-activities', this.panels[i].statusArea.activities.actor, 'visible', Gio.SettingsBindFlags.GET);
-      
+            //remove status icons (this should be connected to signal however)
+            if (!Schema.get_boolean('display-sysicons')){
+                for (let j in Main.sessionMode.panel.right){
+                    let icon = Main.sessionMode.panel.right[j];
+                    this.panels[i].statusArea[icon].container.hide();
+                }
+            }
         }
 
         this.monSigId = Main.layoutManager.connect('monitors-changed', Lang.bind(this, this._updatePanels));
@@ -275,10 +281,10 @@ const HijackPanelButton = new Lang.Class({
 
                 let o = this.statusArea[this.wmIcons[i]];
                 for (let j in containers){
-                        if (Main.__eP.panels[this.iconTarget][containers[j]] == o.actor.get_parent()){
-                            log("restoring");
-                            Main.__eP.panels[this.iconTarget][containers[j]].remove_actor(o.actor);
-                            Main.panel[containers[j]].add_actor(o.actor);
+                        if (Main.__eP.panels[this.iconTarget][containers[j]] == o.container.get_parent()){
+                            Main.__eP.panels[this.iconTarget][containers[j]].remove_actor(o.container);
+                            let idx = (containers[j]=='_rightBox')?0:-1;
+                            Main.panel[containers[j]].insert_child_at_index(o.container,idx);
                         }
                 }
             }
@@ -562,19 +568,24 @@ function enable() {
 
 
 function disable() {
+    log("Disabling Extra Panels Extension");
     //Destroy 
-    Main.panel._appMenus.forEach(function(appMenu){
-        global.display.disconnect(appMenu.grabSigId); 
-        appMenu.destroy();
+    Main.panel._appMenus.forEach(function(aMenu){
+        global.display.disconnect(aMenu.grabSigId);
+        aMenu.destroy();
     });
-    eP.hijack.destroy();    
-    //eP.workspacePatch.destroy();
+    Main.panel.statusArea['appMenu'] = null;
+
+    Main.__eP.hijack.destroy();
+    eP.workspacePatch.destroy();
     
     eP.destroy();
         
     // Restore orignal AppMenu
-    Main.panel.statusArea.appMenu = new Panel.AppMenuButton(Main.panel._menus);
-    Main.panel._leftBox.add(Main.panel.statusArea.appMenu.actor);
+    //Main.panel.statusArea.appMenu = new Panel.AppMenuButton(Main.panel);
+    let indicator = new Panel.AppMenuButton(Main.panel);
+    Main.panel.addToStatusArea('appMenu',indicator, -1, 'left');
+    //Main.panel._leftBox.add(Main.panel.statusArea.appMenu.actor);
     Main.panel._appMenus = null;
     Main.__eP = null;
 
