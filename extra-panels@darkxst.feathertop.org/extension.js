@@ -77,8 +77,8 @@ const ExtraPanels = new Lang.Class({
                             return true;
                         }));
             //Load Thumnails
-            //this.thumbnails[i] = new WorkspaceThumbnails.Thumbnails();
-            //global.overlay_group.add_actor(this.thumbnails[i].actor);
+            this.thumbnails[i] = new WorkspaceThumbnails.Thumbnails();
+            global.overlay_group.add_actor(this.thumbnails[i].actor);
             //Main.overview._group.add_actor(this.thumbnails[i].actor);
 
             Schema.bind('display-clock', this.panels[i].statusArea.dateMenu.actor, 'visible', Gio.SettingsBindFlags.GET);
@@ -499,8 +499,8 @@ const workspacesPatch = new Lang.Class({
                 let monitors = Main.layoutManager.monitors;
                 for (let i = 0; i < monitors.length; i++) {
                     if (i != this._primaryIndex) {
-                        //eP.thumbnails[i]._controls.show();
-                        //eP.thumbnails[i]._thumbnailsBox.show();
+                        eP.thumbnails[i]._controls.show();
+                        eP.thumbnails[i]._thumbnailsBox.show();
                     }
                 }
         });
@@ -509,8 +509,8 @@ const workspacesPatch = new Lang.Class({
                 let monitors = Main.layoutManager.monitors;
                 for (let i = 0; i < monitors.length; i++) {
                     if (i != this._primaryIndex) {
-                        //eP.thumbnails[i]._controls.hide();
-                        //eP.thumbnails[i]._thumbnailsBox.hide();
+                        eP.thumbnails[i]._controls.hide();
+                        eP.thumbnails[i]._thumbnailsBox.hide();
                     }
                 }
         });

@@ -25,17 +25,20 @@ const Thumbnails = new Lang.Class({
     _init: function(){
         this._controls = null;
         this.monitorIndex = 1;
-        try {
-            Main.overview._workspacesDisplay._controls2 = this._controls;
-        } catch(e) {
-            Main.overview._viewSelector._workspacesDisplay._controls2 = this._controls;
-        }
+        this._workspacesDisplay = Main.overview._workspacesDisplay;
+        if (this._workspaceDisplay == undefined)
+            this._workspacesDisplay = Main.overview._viewSelector._workspacesDisplay;
+
+        this._workspacesDisplay._controls2 = this._controls;
+
         let monitor = Main.layoutManager.monitors[this.monitorIndex];
 
         this.actor = new Shell.GenericContainer();
         this.actor.connect('get-preferred-width', Lang.bind(this, this._getPreferredWidth));
         this.actor.connect('get-preferred-height', Lang.bind(this, this._getPreferredHeight));
         this.actor.connect('allocate', Lang.bind(this, this._allocate));
+        //need to add the following
+        //this.actor.connect('notify::mapped', Lang.bind(this, this._setupSwipeScrolling));
         this.actor.connect('parent-set', Lang.bind(this, this._parentSet));
 
         this.actor.set_position(monitor.x, monitor.y);
@@ -59,21 +62,21 @@ const Thumbnails = new Lang.Class({
     _getPreferredWidth: function (actor, forHeight, alloc) {
         // pass through the call in case the child needs it, but report 0x0
         //this._controls[this.monitorIndex].get_preferred_width(forHeight);
-        Main.overview._workspacesDisplay._controls.get_preferred_width(forHeight);
+        this._workspacesDisplay._controls.get_preferred_width(forHeight);
     },
 
     _getPreferredHeight: function (actor, forWidth, alloc) {
         // pass through the call in case the child needs it, but report 0x0
         //this._controls[this.monitorIndex].get_preferred_height(forWidth);
-        Main.overview._workspacesDisplay._controls.get_preferred_height(forWidth);
+        this._workspacesDisplay._controls.get_preferred_height(forWidth);
     },
 
     _allocate: function (actor, box, flags) {
         let monitor = Main.layoutManager.monitors[this.monitorIndex];
 
         let x,y,width,height;
-        [width,height] = Main.overview._workspacesDisplay._controls.get_size();
-        [x,y] = Main.overview._workspacesDisplay._controls.get_transformed_position();
+        [width,height] = this._workspacesDisplay._controls.get_size();
+        [x,y] = this._workspacesDisplay._controls.get_transformed_position();
         
         let childBox = new Clutter.ActorBox();
         let totalWidth = box.x2 - box.x1;
