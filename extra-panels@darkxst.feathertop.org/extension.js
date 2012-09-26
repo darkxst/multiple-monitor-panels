@@ -28,6 +28,7 @@ const Panel = imports.ui.panel;
 const Shell = imports.gi.Shell;
 const St = imports.gi.St;
 const Tweener = imports.ui.tweener;
+const Workspace = imports.ui.workspace;
 const WorkspacesView = imports.ui.workspacesView;
 
 const ExtensionSystem = imports.ui.extensionSystem;
@@ -464,6 +465,7 @@ const workspacesPatch = new Lang.Class({
 
     _init: function(){
         this.wsDispInjection = {};
+        this.wsDispPatch = {};
 
         //probably should use wrapFunction here
         //this.prototype.dynamic_method = this.wrapFunction('dynamic_method', function(){});
@@ -519,13 +521,107 @@ const workspacesPatch = new Lang.Class({
                     }
                 }
         });
+        this.wsDispInjection['_onRestacked'] = WorkspacesView.WorkspacesDisplay.prototype._onRestacked;
+        WorkspacesView.WorkspacesDisplay.prototype._onRestacked = function(){
+                let stack = global.get_window_actors();
+                let stackIndices = {};
+
+                for (let i = 0; i < stack.length; i++) {
+                    // Use the stable sequence for an integer to use as a hash key
+                    stackIndices[stack[i].get_meta_window().get_stable_sequence()] = i;
+                }
+
+                for (let i = 0; i < this._workspacesViews.length; i++)
+                    this._workspacesViews[i].syncStacking(stackIndices);
+
+                this._thumbnailsBox.syncStacking(stackIndices);
+                let monitors = Main.layoutManager.monitors;
+                for (let i = 0; i < monitors.length; i++) {
+                    if (i != this._primaryIndex) {
+                        eP.thumbnails[i]._thumbnailsBox.syncStacking(stackIndices);
+                    }
+                }
+        };
+        
+        this.wsDispInjection['_workspacesChanged'] = WorkspacesView.WorkspacesDisplay.prototype._workspacesChanged;
+        WorkspacesView.WorkspacesDisplay.prototype._workspacesChanged = function(){
+            this._updateAlwaysZoom();
+            this._updateZoom();
+
+            if (this._workspacesViews == null)
+                return;
+
+            let oldNumWorkspaces = this._workspaces[0].length;
+            
+            let newNumWorkspaces = global.screen.n_workspaces;
+            let active = global.screen.get_active_workspace_index();
+            let monitors = Main.layoutManager.monitors;
+            let lostWorkspaces = [];
+            if (newNumWorkspaces > oldNumWorkspaces) {
+                let monitors = Main.layoutManager.monitors;
+                let m = 0;
+                for (let i = 0; i < monitors.length; i++) {
+                    if (this._workspacesOnlyOnPrimary && i != this._primaryIndex)
+                        continue;
+                    // Assume workspaces are only added at the end
+                    for (let w = oldNumWorkspaces; w < newNumWorkspaces; w++) {
+                        let metaWorkspace = global.screen.get_workspace_by_index(w);
+                        this._workspaces[m++][w] =
+                            new Workspace.Workspace(metaWorkspace, i);
+                    }
+                }
+                this._thumbnailsBox.addThumbnails(oldNumWorkspaces, newNumWorkspaces - oldNumWorkspaces);
+                for (let i = 0; i < monitors.length; i++) {
+                    if (i != this._primaryIndex) {
+                        eP.thumbnails[i]._thumbnailsBox.addThumbnails(oldNumWorkspaces, newNumWorkspaces - oldNumWorkspaces);
+                    }
+                }
+            } else {
+                // Assume workspaces are only removed sequentially
+                // (e.g. 2,3,4 - not 2,4,7)
+                let removedIndex;
+                let removedNum = oldNumWorkspaces - newNumWorkspaces;
+                for (let w = 0; w < oldNumWorkspaces; w++) {
+                    let metaWorkspace = global.screen.get_workspace_by_index(w);
+                    if (this._workspaces[0][w].metaWorkspace != metaWorkspace) {
+                        removedIndex = w;
+                        break;
+                    }
+                }
+
+                for (let i = 0; i < this._workspaces.length; i++) {
+                    lostWorkspaces = this._workspaces[i].splice(removedIndex,
+                                                                removedNum);
+
+                    for (let l = 0; l < lostWorkspaces.length; l++) {
+                        lostWorkspaces[l].disconnectAll();
+                        lostWorkspaces[l].destroy();
+                    }
+                }
+
+                this._thumbnailsBox.removeThumbmails(removedIndex, removedNum);
+
+                for (let i = 0; i < monitors.length; i++) {
+                    if (i != this._primaryIndex) {
+                        eP.thumbnails[i]._thumbnailsBox.removeThumbmails(removedIndex, removedNum);
+                    }
+                }
+            }
+
+            for (let i = 0; i < this._workspacesViews.length; i++)
+                this._workspacesViews[i].updateWorkspaces(oldNumWorkspaces,
+                                                          newNumWorkspaces);
+        };
+        /*let workspacesObj = Main.overview._viewSelector._workspacesDisplay;
+        global.screen.disconnect(workspacesObj.nWorkspacesNotifyId);
+        global.screen.connect('notify::n-workspaces',
+            Lang.bind(workspacesObj, workspacesObj._workspacesChanged));*/
+
     },
     destroy: function(){
         for (i in this.wsDispInjection) {
             removeInjection(WorkspacesView.WorkspacesDisplay.prototype, this.wsDispInjection, i);
         }
-        this.wsDispInjection = {};
-
     }
 
 });

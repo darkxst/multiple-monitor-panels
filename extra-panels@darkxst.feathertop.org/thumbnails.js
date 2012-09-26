@@ -8,6 +8,10 @@ const Shell = imports.gi.Shell;
 const St = imports.gi.St;
 const WorkspaceThumbnail = imports.ui.workspaceThumbnail;
 
+const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
+const Injection = Me.imports.injection;
+
 const ThumbnailState = {
     NEW   :         0,
     ANIMATING_IN :  1,
@@ -53,14 +57,16 @@ const Thumbnails = new Lang.Class({
 
         this._controls = controls;
         this.actor.add_actor(controls);
-
+        controls.reactive = true;
+        controls.track_hover = true;
+        controls.connect('notify::hover',
+                         Lang.bind(this._workspacesDisplay, this._workspacesDisplay._onControlsHoverChanged));
+        controls.connect('scroll-event',
+                         Lang.bind(this._workspacesDisplay, this._workspacesDisplay._onScrollEvent));
         this._thumbnailsBox = new myThumbnailsBox(this.monitorIndex);
         //borrow rtl style to flip borders
         this._thumbnailsBox._background.set_style_pseudo_class('rtl');
-        controls.add_actor(this._thumbnailsBox.actor);
-
-
-        
+        controls.add_actor(this._thumbnailsBox.actor);       
     },
     _getPreferredWidth: function (actor, forHeight, alloc) {
         // pass through the call in case the child needs it, but report 0x0
@@ -71,7 +77,6 @@ const Thumbnails = new Lang.Class({
     _getPreferredHeight: function (actor, forWidth, alloc) {
         // pass through the call in case the child needs it, but report 0x0
         //this._controls[this.monitorIndex].get_preferred_height(forWidth);
-
         this._workspacesDisplay._controls.get_preferred_height(forWidth);
     },
 
@@ -201,11 +206,21 @@ const myThumbnailsBox = new Lang.Class({
     Name: 'myThumbnailsBox',
     Extends: WorkspaceThumbnail.ThumbnailsBox,
 
-    //need to add 
-    //this.monitorIndex
     _init: function(monitorIndex){
     	this.parent();
     	this.monitorIndex = monitorIndex;
+        let monitors = Main.layoutManager.monitors;
+        this.thumbInjection = [];
+        this.thumbInjection['addThumbnails'] = Injection.injectToFunction(WorkspaceThumbnail.ThumbnailsBox.prototype, 'addThumbnails',
+            Lang.bind(this,function(start,count){
+                if (start > 0)
+                    this.addThumbnails(start, count);
+        }));
+        this.thumbInjection['removeThumbmails'] = Injection.injectToFunction(WorkspaceThumbnail.ThumbnailsBox.prototype, 'removeThumbmails',
+            Lang.bind(this,function(start,count){
+                this.removeThumbnails(start, count);
+        }));
+
     },
     show: function() {
     	this._switchWorkspaceNotifyId =
@@ -232,10 +247,12 @@ const myThumbnailsBox = new Lang.Class({
             height: monitor.height - panelHeight
         };
         this.addThumbnails(0, global.screen.n_workspaces);
+
+
     },
 
     addThumbnails: function(start,count){
-
+        log("override");
     	//update porthole + create thumbnails
     	for (let k = start; k < start + count; k++) {
             let metaWorkspace = global.screen.get_workspace_by_index(k);
@@ -258,8 +275,27 @@ const myThumbnailsBox = new Lang.Class({
         }
 
         this._queueUpdateStates();
-
         // The thumbnails indicator actually needs to be on top of the thumbnails
         this._indicator.raise_top();
-     }
+     },
+     removeThumbnails: function(start, count) {
+        log('r_override');
+        let currentPos = 0;
+        for (let k = 0; k < this._thumbnails.length; k++) {
+            let thumbnail = this._thumbnails[k];
+
+            if (thumbnail.state > ThumbnailState.NORMAL)
+                continue;
+
+            if (currentPos >= start && currentPos < start + count) {
+                thumbnail.workspaceRemoved();
+                this._setThumbnailState(thumbnail, ThumbnailState.REMOVING);
+            }
+
+            currentPos++;
+        }
+
+        this._queueUpdateStates();
+    }
+
 });
