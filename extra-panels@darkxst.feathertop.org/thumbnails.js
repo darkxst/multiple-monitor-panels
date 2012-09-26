@@ -10,7 +10,6 @@ const WorkspaceThumbnail = imports.ui.workspaceThumbnail;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
-const Injection = Me.imports.injection;
 
 const ThumbnailState = {
     NEW   :         0,
@@ -66,7 +65,8 @@ const Thumbnails = new Lang.Class({
         this._thumbnailsBox = new myThumbnailsBox(this.monitorIndex);
         //borrow rtl style to flip borders
         this._thumbnailsBox._background.set_style_pseudo_class('rtl');
-        controls.add_actor(this._thumbnailsBox.actor);       
+        controls.add_actor(this._thumbnailsBox.actor);
+
     },
     _getPreferredWidth: function (actor, forHeight, alloc) {
         // pass through the call in case the child needs it, but report 0x0
@@ -210,16 +210,7 @@ const myThumbnailsBox = new Lang.Class({
     	this.parent();
     	this.monitorIndex = monitorIndex;
         let monitors = Main.layoutManager.monitors;
-        this.thumbInjection = [];
-        this.thumbInjection['addThumbnails'] = Injection.injectToFunction(WorkspaceThumbnail.ThumbnailsBox.prototype, 'addThumbnails',
-            Lang.bind(this,function(start,count){
-                if (start > 0)
-                    this.addThumbnails(start, count);
-        }));
-        this.thumbInjection['removeThumbmails'] = Injection.injectToFunction(WorkspaceThumbnail.ThumbnailsBox.prototype, 'removeThumbmails',
-            Lang.bind(this,function(start,count){
-                this.removeThumbnails(start, count);
-        }));
+
 
     },
     show: function() {

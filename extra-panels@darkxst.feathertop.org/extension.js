@@ -37,7 +37,7 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 const WorkspaceThumbnails = Me.imports.thumbnails;
-//const WT = imports.ui.workspaceThumbnail;
+const WT = imports.ui.workspaceThumbnail;
 
 //const extension = imports.misc.extensionUtils.getCurrentExtension();
 //const metadata = extension.metadata;
@@ -95,6 +95,23 @@ const ExtraPanels = new Lang.Class({
 
         this.monSigId = Main.layoutManager.connect('monitors-changed', Lang.bind(this, this._updatePanels));
         //we need to rename extra the top bars in Main.ctrlAltTabManager._items[5].name = "Top Bar 2"
+        this.thumbInjection = [];
+        this.thumbInjection['addThumbnails'] =injectToFunction(WT.ThumbnailsBox.prototype, 'addThumbnails',
+            Lang.bind(this,function(start,count){
+                for (let i = 0; i < this.monitors.length; i++) {
+                    if (i != this.primaryIndex && start > 0) {
+                        this.thumbnails[i]._thumbnailsBox.addThumbnails(start, count);
+                    }
+                }
+        }));
+        this.thumbInjection['removeThumbmails'] = injectToFunction(WT.ThumbnailsBox.prototype, 'removeThumbmails',
+            Lang.bind(this,function(start,count){
+                for (let i = 0; i < this.monitors.length; i++) {
+                    if (i != this.primaryIndex) {
+                        this.thumbnails[i]._thumbnailsBox.removeThumbnails(start, count);
+                    }
+                }
+        }));
     },
     
     _updatePanels : function(){
@@ -139,6 +156,8 @@ const ExtraPanels = new Lang.Class({
             this.panels[i]._hotCorner.actor.destroy();
         }
         Main.layoutManager.disconnect(this.monSigId);
+        for (i in this.thumbInjection)
+            removeInjection(WT.ThumbnailsBox.prototype, this.thumbInjection, i);
     }
 });
 
@@ -466,7 +485,7 @@ const workspacesPatch = new Lang.Class({
     _init: function(){
         this.wsDispInjection = {};
         this.wsDispPatch = {};
-
+        this.monitors = Main.layoutManager.monitors;
         //probably should use wrapFunction here
         //this.prototype.dynamic_method = this.wrapFunction('dynamic_method', function(){});
         this.wsDispInjection['_updateWorkspacesGeometry'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, '_updateWorkspacesGeometry',
@@ -616,6 +635,7 @@ const workspacesPatch = new Lang.Class({
         global.screen.disconnect(workspacesObj.nWorkspacesNotifyId);
         global.screen.connect('notify::n-workspaces',
             Lang.bind(workspacesObj, workspacesObj._workspacesChanged));*/
+
 
     },
     destroy: function(){
