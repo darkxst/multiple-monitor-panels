@@ -10,6 +10,7 @@ const WorkspaceThumbnail = imports.ui.workspaceThumbnail;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
+const Convenience = Me.imports.convenience;
 
 const ThumbnailState = {
     NEW   :         0,
@@ -28,7 +29,8 @@ const Thumbnails = new Lang.Class({
     _init: function(){
         this._controls = null;
         this.monitorIndex = 1;
-
+        this.Schema = Convenience.getSettings();
+        //this.Schema = Schema;
         this._workspacesDisplay = Main.overview._workspacesDisplay;
         if (this._workspaceDisplay == undefined)
             this._workspacesDisplay = Main.overview._viewSelector._workspacesDisplay;
@@ -64,7 +66,12 @@ const Thumbnails = new Lang.Class({
                          Lang.bind(this._workspacesDisplay, this._workspacesDisplay._onScrollEvent));
         this._thumbnailsBox = new myThumbnailsBox(this.monitorIndex);
         //borrow rtl style to flip borders
-        this._thumbnailsBox._background.set_style_pseudo_class('rtl');
+        this.Schema.connect('changed::workspace-left', Lang.bind(this, function(){
+            if (this.Schema.get_boolean('workspace-left'))
+                this._thumbnailsBox._background.set_style_pseudo_class('rtl');
+            else
+                this._thumbnailsBox._background.set_style_pseudo_class('ltr');
+        }));
         controls.add_actor(this._thumbnailsBox.actor);
 
     },
@@ -84,32 +91,31 @@ const Thumbnails = new Lang.Class({
         let monitor = Main.layoutManager.monitors[this.monitorIndex];
 
         let x,y,width,height;
-
+        let x1 = 0;
+        let x2 = monitor.x + monitor.width;
         [width,height] = this._workspacesDisplay._controls.get_size();
         [x,y] = this._workspacesDisplay._controls.get_transformed_position();
         
         let childBox = new Clutter.ActorBox();
         let totalWidth = box.x2 - box.x1;
 
-        // width of the controls, here zoom always disabled with multiple monitors.
-
+        // width of the controls (here zoom always disabled with multiple monitors).
         let controlsReserved = width ;
 
-        //let rtl = (Clutter.get_default_text_direction () == Clutter.TextDirection.RTL);
-        let rtl = true;
+        let rtl = this.Schema.get_boolean('workspace-left');
         if (rtl) {
             childBox.x2 = controlsReserved;
-            childBox.x1 = childBox.x2 - controlsReserved;
+            childBox.x1 = x1;//childBox.x2 - controlsReserved;
         } else {
-            childBox.x1 = totalWidth - controlsReserved;
-            childBox.x2 = childBox.x1 + controlsReserved;
+            childBox.x1 = monitor.width - controlsReserved;
+            childBox.x2 = monitor.width;
+
         }
 
         childBox.y1 = y;
         childBox.y2 = childBox.y1 + height ;
 
         this._controls.allocate(childBox, flags);
-
         // this._updateWorkspacesGeometry();
     },
     _parentSet: function(actor, oldParent) {
@@ -140,6 +146,9 @@ const Thumbnails = new Lang.Class({
                     }));*/
         }));
     },
+    destroy: function(){
+        this.actor.destroy();
+    }
 });
 
 const myWorkspaceThumbnail = new Lang.Class({
@@ -243,7 +252,6 @@ const myThumbnailsBox = new Lang.Class({
     },
 
     addThumbnails: function(start,count){
-        log("override");
     	//update porthole + create thumbnails
     	for (let k = start; k < start + count; k++) {
             let metaWorkspace = global.screen.get_workspace_by_index(k);
@@ -270,7 +278,6 @@ const myThumbnailsBox = new Lang.Class({
         this._indicator.raise_top();
      },
      removeThumbnails: function(start, count) {
-        log('r_override');
         let currentPos = 0;
         for (let k = 0; k < this._thumbnails.length; k++) {
             let thumbnail = this._thumbnails[k];

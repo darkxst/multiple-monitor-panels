@@ -31,5 +31,15 @@
       <summary>Display status Icons</summary>
       <description>Set to true to display system status icons on extra panels</description>
     </key>
+    <key name="display-workspace" type="b">
+      <default>true</default>
+      <summary>Display Workspace Switcher</summary>
+      <description>Set to false to disable workspace switcher on extra monitors</description>
+    </key>
+    <key name="workspace-left" type="b">
+      <default>false</default>
+      <summary>Display Workspace Switcher on Left</summary>
+      <description>Set to true to display Workspace Switcher on left</description>
+    </key>
   </schema>
 </schemalist>

@@ -30,14 +30,14 @@ const St = imports.gi.St;
 const Tweener = imports.ui.tweener;
 const Workspace = imports.ui.workspace;
 const WorkspacesView = imports.ui.workspacesView;
+const WT = imports.ui.workspaceThumbnail;
 
 const ExtensionSystem = imports.ui.extensionSystem;
 const ExtensionUtils = imports.misc.extensionUtils;
-
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 const WorkspaceThumbnails = Me.imports.thumbnails;
-const WT = imports.ui.workspaceThumbnail;
+
 
 //const extension = imports.misc.extensionUtils.getCurrentExtension();
 //const metadata = extension.metadata;
@@ -95,6 +95,18 @@ const ExtraPanels = new Lang.Class({
 
         this.monSigId = Main.layoutManager.connect('monitors-changed', Lang.bind(this, this._updatePanels));
         //we need to rename extra the top bars in Main.ctrlAltTabManager._items[5].name = "Top Bar 2"
+        //update labels in the ctrlAltTabManager
+        for (let i = 0; i < this.monitors.length; i++) {
+            let items = Main.ctrlAltTabManager._items;
+            for (let j in items ){
+                log(items[j].name);
+                let x = items[j].proxy.get_parent().x;
+                let y = items[j].proxy.get_parent().y;
+                if ( x == this.monitors[i].x && y == this.monitors[i].y)
+                    items[j].name = "Top Bar "+(i+1);
+            }
+        }
+        //patch add/remove thumbnails
         this.thumbInjection = [];
         this.thumbInjection['addThumbnails'] =injectToFunction(WT.ThumbnailsBox.prototype, 'addThumbnails',
             Lang.bind(this,function(start,count){
@@ -117,6 +129,7 @@ const ExtraPanels = new Lang.Class({
     _updatePanels : function(){
         this.destroy();
         this._init();
+
     },
     _updateCorners : function(monIndex){
         let corner = new Layout.HotCorner();
@@ -149,6 +162,8 @@ const ExtraPanels = new Lang.Class({
 
             this.panels[i].actor.destroy();
             this.panelBoxes = null;
+            this.thumbnails[i].destroy();
+            this.thumbnails[i] = null;
 
             if (this._leftPanelBarriers[i] > 0)
                 global.destroy_pointer_barrier(this._leftPanelBarriers[i]);
@@ -158,6 +173,7 @@ const ExtraPanels = new Lang.Class({
         Main.layoutManager.disconnect(this.monSigId);
         for (i in this.thumbInjection)
             removeInjection(WT.ThumbnailsBox.prototype, this.thumbInjection, i);
+
     }
 });
 
@@ -331,16 +347,7 @@ const NewAppMenuButton = new Lang.Class({
 
     },
     _getPointerMonitor: function() {
-        let monitors = Main.layoutManager.monitors;
-        [x, y, mod] = global.get_pointer();
-        for (let j =0; j < monitors.length; j++){
-            if ( x > monitors[j].x && x < (monitors[j].x + monitors[j].width) && 
-                 y > monitors[j].y && (monitors[j].y + monitors[j].height)){
-                    return j;
-            }
-        }
-        return -1;
-        
+        return Main.layoutManager.currentMonitor;
     },
     _onAppStateChanged: function(appSys, app) {
         let state = app.state;
@@ -486,8 +493,7 @@ const workspacesPatch = new Lang.Class({
         this.wsDispInjection = {};
         this.wsDispPatch = {};
         this.monitors = Main.layoutManager.monitors;
-        //probably should use wrapFunction here
-        //this.prototype.dynamic_method = this.wrapFunction('dynamic_method', function(){});
+
         this.wsDispInjection['_updateWorkspacesGeometry'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, '_updateWorkspacesGeometry',
             function() {
                 /*try {
@@ -505,19 +511,20 @@ const workspacesPatch = new Lang.Class({
                 let m = 0;
 
                 for (let i = 0; i < monitors.length; i++) {
-                    if (i == this._primaryIndex) {
-                        m++;
-                    }else if (!thisParent._workspacesOnlyOnPrimary && i != thisParent._primaryIndex ) {
-                        thisParent._workspacesViews[m].setClipRect(monitors[i].x + resWidth,
-                                                                   monitors[i].y + panelHeight,
-                                                                   monitors[i].width - resWidth,
-                                                                   monitors[i].height - panelHeight);
-                        thisParent._workspacesViews[m].setGeometry(monitors[i].x + resWidth,
-                                                                   monitors[i].y + panelHeight,
-                                                                   monitors[i].width - resWidth ,
-                                                                   monitors[i].height - panelHeight, 0);
-                        m++;
+                    if (!thisParent._workspacesOnlyOnPrimary && i != thisParent._primaryIndex ) {
+                        let x1 = monitors[i].x + (Schema.get_boolean('workspace-left')?resWidth:0);
+                        
+                            thisParent._workspacesViews[m].setClipRect(x1,
+                                                                       monitors[i].y + panelHeight,
+                                                                       monitors[i].width - resWidth,
+                                                                       monitors[i].height - panelHeight);
+                            thisParent._workspacesViews[m].setGeometry(x1,
+                                                                       monitors[i].y + panelHeight,
+                                                                       monitors[i].width - resWidth ,
+                                                                       monitors[i].height - panelHeight, 0);
+                        
                     }
+                    m++;
                 }
         });
         this.wsDispInjection['show'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, 'show',

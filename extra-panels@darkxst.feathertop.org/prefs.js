@@ -179,10 +179,26 @@ const SettingsWidget = new GObject.Class({
         let sysIcons = new Gtk.CheckButton({  label:_('Display Status Icons'),
                                                 margin_left: 5,
                                                 /*margin_top: 5,*/
-                                                margin_bottom: 20
+                                                margin_bottom: 5
                                             });
         this.add(sysIcons);
         this._settings.bind('display-sysicons', sysIcons, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        let workspaceSw = new Gtk.CheckButton({  label:_('Display Workspace Switchers'),
+                                                margin_left: 5,
+                                                /*margin_top: 5,*/
+                                                margin_bottom: 5
+                                            });
+        this.add(workspaceSw);
+        this._settings.bind('display-workspace', workspaceSw, 'active', Gio.SettingsBindFlags.DEFAULT);
+
+        let workspaceLeft = new Gtk.CheckButton({  label:_('Workspace Switchers on Left'),
+                                                margin_left: 5,
+                                                /*margin_top: 5,*/
+                                                margin_bottom: 20
+                                            });
+        this.add(workspaceLeft);
+        this._settings.bind('workspace-left', workspaceLeft, 'active', Gio.SettingsBindFlags.DEFAULT);
 
         let seperator = new Gtk.HSeparator();
         this.add(seperator);
