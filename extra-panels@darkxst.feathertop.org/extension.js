@@ -100,7 +100,6 @@ const ExtraPanels = new Lang.Class({
         for (let i = 0; i < this.monitors.length; i++) {
             let items = Main.ctrlAltTabManager._items;
             for (let j in items ){
-                log(items[j].name);
                 let x = items[j].proxy.get_parent().x;
                 let y = items[j].proxy.get_parent().y;
                 if ( x == this.monitors[i].x && y == this.monitors[i].y)
@@ -345,11 +344,12 @@ const NewAppMenuButton = new Lang.Class({
         this.lastFocusedApp = Shell.WindowTracker.get_default().focus_app;
         this.grabSigId = global.display.connect('grab-op-end', Lang.bind(this, this._sync));
         Schema.bind('display-appmenu', this.actor, 'visible', Gio.SettingsBindFlags.GET);
+    },
 
-    },
     _getPointerMonitor: function() {
-        return Main.layoutManager.currentMonitor;
+        return global.screen.get_current_monitor();
     },
+
     _onAppStateChanged: function(appSys, app) {
         let state = app.state;
 
@@ -371,7 +371,6 @@ const NewAppMenuButton = new Lang.Class({
         let tracker = Shell.WindowTracker.get_default();
         let focusedApp = tracker.focus_app;
 
-        
         let lastStartedApp = null;
         let workspace = global.screen.get_active_workspace();
         for (let i = 0; i < this._startingApps.length; i++)
@@ -389,7 +388,6 @@ const NewAppMenuButton = new Lang.Class({
                                            screen.get_active_workspace());
 
             for (let i = 0; i < windows.length; i++){           
-        
                 if (windows[i].get_monitor() == this.monitorIndex){
                     targetApp = tracker.get_window_app(windows[i]);
                     break;

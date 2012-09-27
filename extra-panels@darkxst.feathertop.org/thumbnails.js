@@ -66,14 +66,16 @@ const Thumbnails = new Lang.Class({
                          Lang.bind(this._workspacesDisplay, this._workspacesDisplay._onScrollEvent));
         this._thumbnailsBox = new myThumbnailsBox(this.monitorIndex);
         //borrow rtl style to flip borders
-        this.Schema.connect('changed::workspace-left', Lang.bind(this, function(){
-            if (this.Schema.get_boolean('workspace-left'))
-                this._thumbnailsBox._background.set_style_pseudo_class('rtl');
-            else
-                this._thumbnailsBox._background.set_style_pseudo_class('ltr');
-        }));
+        this._setBackgroundClass();
+        this.Schema.connect('changed::workspace-left', Lang.bind(this, this._setBackgroundClass));
         controls.add_actor(this._thumbnailsBox.actor);
 
+    },
+    _setBackgroundClass: function(){
+        if (this.Schema.get_boolean('workspace-left'))
+            this._thumbnailsBox._background.set_style_pseudo_class('rtl');
+        else
+            this._thumbnailsBox._background.set_style_pseudo_class('ltr');
     },
     _getPreferredWidth: function (actor, forHeight, alloc) {
         // pass through the call in case the child needs it, but report 0x0
