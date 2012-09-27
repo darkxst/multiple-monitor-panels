@@ -79,8 +79,8 @@ const ExtraPanels = new Lang.Class({
                         }));
             //Load Thumnails
             this.thumbnails[i] = new WorkspaceThumbnails.Thumbnails();
-            global.overlay_group.add_actor(this.thumbnails[i].actor);
-            //Main.overview._group.add_actor(this.thumbnails[i].actor);
+            //global.overlay_group.add_actor(this.thumbnails[i].actor);
+            Main.overview._group.add_actor(this.thumbnails[i].actor);
 
             Schema.bind('display-clock', this.panels[i].statusArea.dateMenu.actor, 'visible', Gio.SettingsBindFlags.GET);
             Schema.bind('display-activities', this.panels[i].statusArea.activities.actor, 'visible', Gio.SettingsBindFlags.GET);
@@ -91,6 +91,7 @@ const ExtraPanels = new Lang.Class({
                     this.panels[i].statusArea[icon].container.hide();
                 }
             }
+            
         }
 
         this.monSigId = Main.layoutManager.connect('monitors-changed', Lang.bind(this, this._updatePanels));
