@@ -176,7 +176,7 @@ const SettingsWidget = new GObject.Class({
         this.add(appmenu);
         this._settings.bind('display-appmenu', appmenu, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-        let sysIcons = new Gtk.CheckButton({  label:_('Display Status Icons'),
+        let sysIcons = new Gtk.CheckButton({  label:_('Display Status Icons *'),
                                                 margin_left: 5,
                                                 /*margin_top: 5,*/
                                                 margin_bottom: 5
@@ -184,7 +184,7 @@ const SettingsWidget = new GObject.Class({
         this.add(sysIcons);
         this._settings.bind('display-sysicons', sysIcons, 'active', Gio.SettingsBindFlags.DEFAULT);
 
-        let workspaceSw = new Gtk.CheckButton({  label:_('Display Workspace Switchers'),
+        let workspaceSw = new Gtk.CheckButton({  label:_('Display Workspace Switchers *'),
                                                 margin_left: 5,
                                                 /*margin_top: 5,*/
                                                 margin_bottom: 5
@@ -195,11 +195,16 @@ const SettingsWidget = new GObject.Class({
         let workspaceLeft = new Gtk.CheckButton({  label:_('Workspace Switchers on Left'),
                                                 margin_left: 5,
                                                 /*margin_top: 5,*/
-                                                margin_bottom: 20
+                                                margin_bottom: 5
                                             });
         this.add(workspaceLeft);
         this._settings.bind('workspace-left', workspaceLeft, 'active', Gio.SettingsBindFlags.DEFAULT);
 
+        this.add(new Gtk.Label({ label: _("* These options require a restart of the shell to activate."),
+                                 margin_bottom: 20,
+                                 xalign: 0
+                                 /*justify: Gtk.Justification.LEFT*/
+                             }));
         let seperator = new Gtk.HSeparator();
         this.add(seperator);
 

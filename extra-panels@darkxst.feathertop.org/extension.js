@@ -55,6 +55,7 @@ const ExtraPanels = new Lang.Class({
         this.panelBoxes = [];
         this.panels = [];
         this.thumbnails = [];
+        this.workspaceSwitchers = Schema.get_boolean('display-workspace');
         Main.layoutManager.panelBoxes = this.panelBoxes;
         
         for (let i = 0; i < this.monitors.length; i++) {
@@ -77,10 +78,13 @@ const ExtraPanels = new Lang.Class({
                             Mainloop.source_remove(barrier_timeout);
                             return true;
                         }));
+
             //Load Thumnails
-            this.thumbnails[i] = new WorkspaceThumbnails.Thumbnails();
-            //global.overlay_group.add_actor(this.thumbnails[i].actor);
-            Main.overview._group.add_actor(this.thumbnails[i].actor);
+            if (this.workspaceSwitchers){
+                this.thumbnails[i] = new WorkspaceThumbnails.Thumbnails();
+                //global.overlay_group.add_actor(this.thumbnails[i].actor);
+                Main.overview._group.add_actor(this.thumbnails[i].actor);
+            }
 
             Schema.bind('display-clock', this.panels[i].statusArea.dateMenu.actor, 'visible', Gio.SettingsBindFlags.GET);
             Schema.bind('display-activities', this.panels[i].statusArea.activities.actor, 'visible', Gio.SettingsBindFlags.GET);
@@ -106,24 +110,27 @@ const ExtraPanels = new Lang.Class({
                     items[j].name = "Top Bar "+(i+1);
             }
         }
-        //patch add/remove thumbnails
-        this.thumbInjection = [];
-        this.thumbInjection['addThumbnails'] =injectToFunction(WT.ThumbnailsBox.prototype, 'addThumbnails',
-            Lang.bind(this,function(start,count){
-                for (let i = 0; i < this.monitors.length; i++) {
-                    if (i != this.primaryIndex && start > 0) {
-                        this.thumbnails[i]._thumbnailsBox.addThumbnails(start, count);
+
+        if (this.workspaceSwitchers){
+            //patch add/remove thumbnails
+            this.thumbInjection = [];
+            this.thumbInjection['addThumbnails'] =injectToFunction(WT.ThumbnailsBox.prototype, 'addThumbnails',
+                Lang.bind(this,function(start,count){
+                    for (let i = 0; i < this.monitors.length; i++) {
+                        if (i != this.primaryIndex && start > 0) {
+                            this.thumbnails[i]._thumbnailsBox.addThumbnails(start, count);
+                        }
                     }
-                }
-        }));
-        this.thumbInjection['removeThumbmails'] = injectToFunction(WT.ThumbnailsBox.prototype, 'removeThumbmails',
-            Lang.bind(this,function(start,count){
-                for (let i = 0; i < this.monitors.length; i++) {
-                    if (i != this.primaryIndex) {
-                        this.thumbnails[i]._thumbnailsBox.removeThumbnails(start, count);
+            }));
+            this.thumbInjection['removeThumbmails'] = injectToFunction(WT.ThumbnailsBox.prototype, 'removeThumbmails',
+                Lang.bind(this,function(start,count){
+                    for (let i = 0; i < this.monitors.length; i++) {
+                        if (i != this.primaryIndex) {
+                            this.thumbnails[i]._thumbnailsBox.removeThumbnails(start, count);
+                        }
                     }
-                }
-        }));
+            }));
+        }
     },
     
     _updatePanels : function(){
@@ -171,8 +178,10 @@ const ExtraPanels = new Lang.Class({
             this.panels[i]._hotCorner.actor.destroy();
         }
         Main.layoutManager.disconnect(this.monSigId);
-        for (i in this.thumbInjection)
-            removeInjection(WT.ThumbnailsBox.prototype, this.thumbInjection, i);
+        if (this.workspaceSwitchers){
+            for (i in this.thumbInjection)
+                removeInjection(WT.ThumbnailsBox.prototype, this.thumbInjection, i);
+        }
 
     }
 });
@@ -504,7 +513,7 @@ const workspacesPatch = new Lang.Class({
                     return;
                 
                 let panelHeight = Main.panel.actor.height;
-                let resWidth = thisParent._controls.get_width();
+                let resWidth = (eP.workspaceSwitchers)?thisParent._controls.get_width():0;
                 let monitors = Main.layoutManager.monitors;
 
                 let m = 0;
@@ -526,47 +535,49 @@ const workspacesPatch = new Lang.Class({
                     m++;
                 }
         });
-        this.wsDispInjection['show'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, 'show',
-            function(){
-                let monitors = Main.layoutManager.monitors;
-                for (let i = 0; i < monitors.length; i++) {
-                    if (i != this._primaryIndex) {
-                        eP.thumbnails[i]._controls.show();
-                        eP.thumbnails[i]._thumbnailsBox.show();
+        if (eP.workspaceSwitchers){
+            this.wsDispInjection['show'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, 'show',
+                function(){
+                    let monitors = Main.layoutManager.monitors;
+                    for (let i = 0; i < monitors.length; i++) {
+                        if (i != this._primaryIndex) {
+                            eP.thumbnails[i]._controls.show();
+                            eP.thumbnails[i]._thumbnailsBox.show();
+                        }
                     }
-                }
-        });
-        this.wsDispInjection['hide'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, 'hide',
-            function(){
-                let monitors = Main.layoutManager.monitors;
-                for (let i = 0; i < monitors.length; i++) {
-                    if (i != this._primaryIndex) {
-                        eP.thumbnails[i]._controls.hide();
-                        eP.thumbnails[i]._thumbnailsBox.hide();
+            });
+            this.wsDispInjection['hide'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, 'hide',
+                function(){
+                    let monitors = Main.layoutManager.monitors;
+                    for (let i = 0; i < monitors.length; i++) {
+                        if (i != this._primaryIndex) {
+                            eP.thumbnails[i]._controls.hide();
+                            eP.thumbnails[i]._thumbnailsBox.hide();
+                        }
                     }
-                }
-        });
-        this.wsDispInjection['_onRestacked'] = WorkspacesView.WorkspacesDisplay.prototype._onRestacked;
-        WorkspacesView.WorkspacesDisplay.prototype._onRestacked = function(){
-                let stack = global.get_window_actors();
-                let stackIndices = {};
+            });
+            this.wsDispInjection['_onRestacked'] = WorkspacesView.WorkspacesDisplay.prototype._onRestacked;
+            WorkspacesView.WorkspacesDisplay.prototype._onRestacked = function(){
+                    let stack = global.get_window_actors();
+                    let stackIndices = {};
 
-                for (let i = 0; i < stack.length; i++) {
-                    // Use the stable sequence for an integer to use as a hash key
-                    stackIndices[stack[i].get_meta_window().get_stable_sequence()] = i;
-                }
-
-                for (let i = 0; i < this._workspacesViews.length; i++)
-                    this._workspacesViews[i].syncStacking(stackIndices);
-
-                this._thumbnailsBox.syncStacking(stackIndices);
-                let monitors = Main.layoutManager.monitors;
-                for (let i = 0; i < monitors.length; i++) {
-                    if (i != this._primaryIndex) {
-                        eP.thumbnails[i]._thumbnailsBox.syncStacking(stackIndices);
+                    for (let i = 0; i < stack.length; i++) {
+                        // Use the stable sequence for an integer to use as a hash key
+                        stackIndices[stack[i].get_meta_window().get_stable_sequence()] = i;
                     }
-                }
-        };
+
+                    for (let i = 0; i < this._workspacesViews.length; i++)
+                        this._workspacesViews[i].syncStacking(stackIndices);
+
+                    this._thumbnailsBox.syncStacking(stackIndices);
+                    let monitors = Main.layoutManager.monitors;
+                    for (let i = 0; i < monitors.length; i++) {
+                        if (i != this._primaryIndex) {
+                            eP.thumbnails[i]._thumbnailsBox.syncStacking(stackIndices);
+                        }
+                    }
+            };
+        }
 
     },
     destroy: function(){
