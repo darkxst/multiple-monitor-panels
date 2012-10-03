@@ -90,12 +90,15 @@ const Thumbnails = new Lang.Class({
     },
 
     _allocate: function (actor, box, flags) {
+        this._setBackgroundClass();
         let monitor = Main.layoutManager.monitors[this.monitorIndex];
 
         let x,y,width,height;
         let x1 = 0;
         let x2 = monitor.x + monitor.width;
-        [width,height] = this._workspacesDisplay._controls.get_size();
+        //[width,height] = this._workspacesDisplay._controls.get_size();
+        width = this._controls.get_width();
+        height = this._workspacesDisplay._controls.get_height();
         [x,y] = this._workspacesDisplay._controls.get_transformed_position();
         
         let childBox = new Clutter.ActorBox();
