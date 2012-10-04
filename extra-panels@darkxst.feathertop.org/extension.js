@@ -320,15 +320,16 @@ const HijackPanelButton = new Lang.Class({
     },
     _returnIcons: function(){
         //return in hijack icons to primary panel 
+        this.statusArea = Main.panel.statusArea;
         let containers = ['_leftBox','_centerBox','_rightBox'];
         for (let i in this.wmIcons){
-
                 let o = this.statusArea[this.wmIcons[i]];
                 for (let j in containers){
                         if (Main.__eP.panels[this.iconTarget][containers[j]] == o.container.get_parent()){
                             Main.__eP.panels[this.iconTarget][containers[j]].remove_actor(o.container);
                             let idx = (containers[j]=='_rightBox')?0:-1;
                             Main.panel[containers[j]].insert_child_at_index(o.container,idx);
+                            break;
                         }
                 }
             }

@@ -90,7 +90,7 @@ const Thumbnails = new Lang.Class({
     },
 
     _allocate: function (actor, box, flags) {
-        this._setBackgroundClass();
+        //this._setBackgroundClass();
         let monitor = Main.layoutManager.monitors[this.monitorIndex];
 
         let x,y,width,height;
