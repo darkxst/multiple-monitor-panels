@@ -104,10 +104,12 @@ const ExtraPanels = new Lang.Class({
         for (let i = 0; i < this.monitors.length; i++) {
             let items = Main.ctrlAltTabManager._items;
             for (let j in items ){
-                let x = items[j].proxy.get_parent().x;
-                let y = items[j].proxy.get_parent().y;
-                if ( x == this.monitors[i].x && y == this.monitors[i].y)
-                    items[j].name = "Top Bar "+(i+1);
+                if (items[j].name == "Top Bar"){
+                    let x = items[j].proxy.get_parent().x;
+                    let y = items[j].proxy.get_parent().y;
+                    if ( x == this.monitors[i].x && y == this.monitors[i].y)
+                        items[j].name = "Top Bar "+(i+1);
+                }
             }
         }
 
