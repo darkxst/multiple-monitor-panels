@@ -17,6 +17,7 @@
 // Author: darkxst
 
 const Clutter = imports.gi.Clutter;
+const Config = imports.misc.config;
 const Gio = imports.gi.Gio;
 const Lang = imports.lang;
 const Layout = imports.ui.layout;
@@ -38,7 +39,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 const WorkspaceThumbnails = Me.imports.thumbnails;
 
-
+let shell_Version = Config.PACKAGE_VERSION;
 //const extension = imports.misc.extensionUtils.getCurrentExtension();
 //const metadata = extension.metadata;
 
@@ -124,7 +125,12 @@ const ExtraPanels = new Lang.Class({
                         }
                     }
             }));
-            this.thumbInjection['removeThumbmails'] = injectToFunction(WT.ThumbnailsBox.prototype, 'removeThumbmails',
+            let removeThumbnails = ''
+            if (shell_Version >= "3.6.1")
+                removeThumbnails = 'removeThumbnails';
+            else
+                removeThumbnails = 'removeThumbmails';
+            this.thumbInjection[removeThumbnails] = injectToFunction(WT.ThumbnailsBox.prototype, removeThumbnails,
                 Lang.bind(this,function(start,count){
                     for (let i = 0; i < this.monitors.length; i++) {
                         if (i != this.primaryIndex) {
