@@ -292,21 +292,23 @@ const HijackPanelButton = new Lang.Class({
         }
     },
     _findIcons: function(){
-        //3.4
-        let sysIcons = Main.panel._status_area_order;
-        //3.6
-        if (sysIcons == undefined)
-            sysIcons = Main.sessionMode.panel;
-        let sysIconsList = [];
-        for (let i in sysIcons){
-            sysIcons[i].forEach(function(icon){
-                sysIconsList.push(icon);
-            });
-        }
+        if (Main.sessionMode.currentMode == 'user'){
+            //3.4
+            let sysIcons = Main.panel._status_area_order;
+            //3.6
+            if (sysIcons == undefined)
+                sysIcons = Main.sessionMode.panel;
+            let sysIconsList = [];
+            for (let i in sysIcons){
+                sysIcons[i].forEach(function(icon){
+                    sysIconsList.push(icon);
+                });
+            }
 
-        for (let i in this.statusArea){
-            if (!this._isBlackList(i) && sysIconsList.indexOf(i) == -1 ){
-                this._updateAvailable(i);
+            for (let i in this.statusArea){
+                if (!this._isBlackList(i) && sysIconsList.indexOf(i) == -1 ){
+                    this._updateAvailable(i);
+                }
             }
         }
     },
