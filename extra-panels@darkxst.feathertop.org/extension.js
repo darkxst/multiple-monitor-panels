@@ -526,6 +526,7 @@ const workspacesPatch = new Lang.Class({
                 let panelHeight = Main.panel.actor.height;
                 let resWidth = (eP.workspaceSwitchers)?thisParent._controls.get_width():0;
                 let monitors = Main.layoutManager.monitors;
+                let overviewSpacing = Main.overview._spacing;
 
                 let m = 0;
 
@@ -537,10 +538,10 @@ const workspacesPatch = new Lang.Class({
                                                                        monitors[i].y + panelHeight,
                                                                        monitors[i].width - resWidth,
                                                                        monitors[i].height - panelHeight);
-                            thisParent._workspacesViews[m].setGeometry(x1,
-                                                                       monitors[i].y + panelHeight,
-                                                                       monitors[i].width - resWidth ,
-                                                                       monitors[i].height - panelHeight, 0);
+                            thisParent._workspacesViews[m].setGeometry(x1 + overviewSpacing/2,
+                                                                       monitors[i].y + panelHeight + overviewSpacing/2,
+                                                                       monitors[i].width - resWidth - overviewSpacing,
+                                                                       monitors[i].height - panelHeight - overviewSpacing, 0);
                         
                     }
                     m++;
