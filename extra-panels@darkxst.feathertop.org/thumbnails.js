@@ -26,19 +26,18 @@ const ThumbnailState = {
 const Thumbnails = new Lang.Class({
     Name: 'Thumbnails',
 
-    _init: function(){
+    _init: function(monitorIndex){
         this._controls = null;
-        this.monitorIndex = 1;
+        this.monitorIndex = monitorIndex;
         this.Schema = Convenience.getSettings();
         //this.Schema = Schema;
         this._workspacesDisplay = Main.overview._workspacesDisplay;
         if (this._workspaceDisplay == undefined)
             this._workspacesDisplay = Main.overview._viewSelector._workspacesDisplay;
 
-        this._workspacesDisplay._controls2 = this._controls;
+        //this._workspacesDisplay._controls2 = this._controls;
 
         let monitor = Main.layoutManager.monitors[this.monitorIndex];
-
         this.actor = new Shell.GenericContainer();
         this.actor.connect('get-preferred-width', Lang.bind(this, this._getPreferredWidth));
         this.actor.connect('get-preferred-height', Lang.bind(this, this._getPreferredHeight));
@@ -50,7 +49,7 @@ const Thumbnails = new Lang.Class({
         this.actor.connect('parent-set', Lang.bind(this, this._parentSet));
 
         this.actor.set_position(monitor.x, monitor.y);
-
+        //this.actor.set_position(-1280, monitor.y);
         let controls = new St.Bin({ style_class: 'workspace-controls',
                                     request_mode: Clutter.RequestMode.WIDTH_FOR_HEIGHT,
                                     y_align: St.Align.START,
@@ -94,13 +93,14 @@ const Thumbnails = new Lang.Class({
         let monitor = Main.layoutManager.monitors[this.monitorIndex];
 
         let x,y,width,height;
-        let x1 = 0;
+        let x1 = monitor.x;
         let x2 = monitor.x + monitor.width;
+
         //[width,height] = this._workspacesDisplay._controls.get_size();
         width = this._controls.get_width();
         height = this._workspacesDisplay._controls.get_height();
         [x,y] = this._workspacesDisplay._controls.get_transformed_position();
-        
+
         let childBox = new Clutter.ActorBox();
         let totalWidth = box.x2 - box.x1;
 

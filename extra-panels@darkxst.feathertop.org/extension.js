@@ -62,7 +62,6 @@ const ExtraPanels = new Lang.Class({
         for (let i = 0; i < this.monitors.length; i++) {
             if (i == this.primaryIndex)
                 continue;
-
             this.panelBoxes[i] = new St.BoxLayout({ name: 'panelBox'+(i+1), vertical: true });
             Main.layoutManager.addChrome(this.panelBoxes[i], { affectsStruts: true });
             this.panels[i] = new Panel.Panel();
@@ -82,8 +81,12 @@ const ExtraPanels = new Lang.Class({
 
             //Load Thumnails
             if (this.workspaceSwitchers){
-                this.thumbnails[i] = new WorkspaceThumbnails.Thumbnails();
+                this.thumbnails[i] = new WorkspaceThumbnails.Thumbnails(i);
                 //global.overlay_group.add_actor(this.thumbnails[i].actor);
+                if (this.monitors[i].x < Main.overview._group.x) {
+                    let x = this.monitors[i].x - Main.overview._group.x;
+                    this.thumbnails[i].actor.set_position(x, this.monitors[i].y);
+                }
                 Main.overview._group.add_actor(this.thumbnails[i].actor);
             }
 
