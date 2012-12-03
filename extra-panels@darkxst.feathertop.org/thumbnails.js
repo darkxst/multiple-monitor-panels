@@ -93,8 +93,8 @@ const Thumbnails = new Lang.Class({
         let monitor = Main.layoutManager.monitors[this.monitorIndex];
 
         let x,y,width,height;
-        let x1 = monitor.x;
-        let x2 = monitor.x + monitor.width;
+        let x1 = 0;
+        let x2 = monitor.width;
 
         //[width,height] = this._workspacesDisplay._controls.get_size();
         width = this._controls.get_width();
