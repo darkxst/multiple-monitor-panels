@@ -22,7 +22,6 @@ const Gio = imports.gi.Gio;
 const Lang = imports.lang;
 const Layout = imports.ui.layout;
 const Main = imports.ui.main;
-const LayoutManager = imports.ui.LayoutManager;
 const Mainloop = imports.mainloop;
 const Meta = imports.gi.Meta;
 const Overview = imports.ui.overview;
@@ -46,32 +45,34 @@ let shell_Version = Config.PACKAGE_VERSION;
 
 let eP, Schema, panels;
 
+
 const ExtraPanels = new Lang.Class({
     Name: 'ExtraPanels',
 
     _init : function() {
         Schema = Convenience.getSettings();
         this.Schema = Schema;
-        this.monitors = LayoutManager.monitors;
-        this.primaryIndex = LayoutManager.primaryIndex;
+        this.monitors = Main.layoutManager.monitors;
+        this.primaryIndex = Main.layoutManager.primaryIndex;
         this.panelBoxes = [];
         this.panels = [];
         this.thumbnails = [];
         this.workspaceSwitchers = Schema.get_boolean('display-workspace');
-        LayoutManager.panelBoxes = this.panelBoxes;
+        Main.layoutManager.panelBoxes = this.panelBoxes;
 
         for (let i = 0; i < this.monitors.length; i++) {
             if (i == this.primaryIndex)
                 continue;
             this.panelBoxes[i] = new St.BoxLayout({ name: 'panelBox'+(i+1), vertical: true });
-            LayoutManager.addChrome(this.panelBoxes[i], { affectsStruts: true });
+            Main.layoutManager.addChrome(this.panelBoxes[i], { affectsStruts: true });
             this.panels[i] = new Panel.Panel();
-            LayoutManager.panelBox.remove_actor(this.panels[i].actor);
+            Main.layoutManager.panelBox.remove_actor(this.panels[i].actor);
             this.panelBoxes[i].add(this.panels[i].actor)
             this.panelBoxes[i].set_position(this.monitors[i].x, this.monitors[i].y);
             this.panelBoxes[i].set_width(this.monitors[i].width);
 
-            this._updateCorners(i);
+            // this._updateCorners(i);
+            /*
             let barrier_timeout = Mainloop.timeout_add(
                         200,
                         Lang.bind(this, function() {
@@ -79,17 +80,20 @@ const ExtraPanels = new Lang.Class({
                             Mainloop.source_remove(barrier_timeout);
                             return true;
                         }));
+            */
 
             //Load Thumnails
+
             if (this.workspaceSwitchers){
                 this.thumbnails[i] = new WorkspaceThumbnails.Thumbnails(i);
                 //global.overlay_group.add_actor(this.thumbnails[i].actor);
-                if (this.monitors[i].x < Main.overview._group.x) {
-                    let x = this.monitors[i].x - Main.overview._group.x;
-                    this.thumbnails[i].actor.set_position(x, this.monitors[i].y);
-                }
-                Main.overview._group.add_actor(this.thumbnails[i].actor);
+            //    if (this.monitors[i].x < Main.overview._group.x) {
+            //        let x = this.monitors[i].x - Main.overview._group.x;
+            //        this.thumbnails[i].actor.set_position(x, this.monitors[i].y);
+             //   }
+            //    Main.overview._group.add_actor(this.thumbnails[i].actor);
             }
+
 
             Schema.bind('display-clock', this.panels[i].statusArea.dateMenu.actor, 'visible', Gio.SettingsBindFlags.GET);
             Schema.bind('display-activities', this.panels[i].statusArea.activities.actor, 'visible', Gio.SettingsBindFlags.GET);
@@ -103,7 +107,7 @@ const ExtraPanels = new Lang.Class({
 
         }
 
-        this.monSigId = LayoutManager.connect('monitors-changed', Lang.bind(this, this._updatePanels));
+        this.monSigId = Main.layoutManager.connect('monitors-changed', Lang.bind(this, this._updatePanels));
         //we need to rename extra the top bars in Main.ctrlAltTabManager._items[5].name = "Top Bar 2"
         //update labels in the ctrlAltTabManager
         for (let i = 0; i < this.monitors.length; i++) {
@@ -152,9 +156,10 @@ const ExtraPanels = new Lang.Class({
     },
     _updateCorners : function(monIndex){
         let corner = new Layout.HotCorner();
-        LayoutManager._hotCorners.push(corner);
+
+        Main.layoutManager._hotCorners.push(corner);
         corner.actor.set_position(this.monitors[monIndex].x, this.monitors[monIndex].y);
-        LayoutManager._chrome.addActor(corner.actor);
+        Main.layoutManager._chrome.addActor(corner.actor);
         this.panels[monIndex]._hotCorner = corner;
     },
     _updateBarriers : function(){
@@ -189,7 +194,7 @@ const ExtraPanels = new Lang.Class({
 
             this.panels[i]._hotCorner.actor.destroy();
         }
-        LayoutManager.disconnect(this.monSigId);
+        Main.layoutManager.disconnect(this.monSigId);
         if (this.workspaceSwitchers){
             for (i in this.thumbInjection)
                 removeInjection(WT.ThumbnailsBox.prototype, this.thumbInjection, i);
@@ -206,8 +211,9 @@ const HijackPanelButton = new Lang.Class({
         //might need to add timer here, to run initial update after shell startup.
 
         //target monitor for moving icons
-        let monitors = LayoutManager.monitors;
-        let primaryIndex = LayoutManager.primaryIndex;
+        let monitors = Main.layoutManager.monitors;
+        log(monitors);
+        let primaryIndex = Main.layoutManager.primaryIndex;
 
         for (let i = 0; i < monitors.length; i++) {
             if (i == primaryIndex)
@@ -473,10 +479,10 @@ const NewAppMenuButton = new Lang.Class({
         }
 
         this._targetApp = targetApp;
-        let icon = targetApp.get_faded_icon(2 * Panel.PANEL_ICON_SIZE);
+        let icon = targetApp.get_faded_icon(2 * Panel.PANEL_ICON_SIZE, this._iconBox.text_direction);
 
         this._label.setText(targetApp.get_name());
-        this.setName(targetApp.get_name());
+        //this.setName(targetApp.get_name());
 
         this._iconBox.set_child(icon);
         this._iconBox.show();
@@ -515,7 +521,7 @@ const workspacesPatch = new Lang.Class({
     _init: function(){
         this.wsDispInjection = {};
         this.wsDispPatch = {};
-        this.monitors = LayoutManager.monitors;
+        this.monitors = Main.layoutManager.monitors;
 
         this.wsDispInjection['_updateWorkspacesGeometry'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, '_updateWorkspacesGeometry',
             function() {
@@ -523,13 +529,13 @@ const workspacesPatch = new Lang.Class({
                     let thisParent = Main.overview._workspacesDisplay;
                 } catch(e) {}
                 if (thisParent == undefined)*/
-                let thisParent = Main.overview._viewSelector._workspacesDisplay;
+                let thisParent = Main.overview.viewSelector._workspacesDisplay;
                 if (!thisParent._workspacesViews)
                     return;
 
                 let panelHeight = Main.panel.actor.height;
                 let resWidth = (eP.workspaceSwitchers)?thisParent._controls.get_width():0;
-                let monitors = LayoutManager.monitors;
+                let monitors = Main.layoutManager.monitors;
                 let overviewSpacing = Main.overview._spacing;
 
                 let m = 0;
@@ -554,7 +560,7 @@ const workspacesPatch = new Lang.Class({
         if (eP.workspaceSwitchers){
             this.wsDispInjection['show'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, 'show',
                 function(){
-                    let monitors = LayoutManager.monitors;
+                    let monitors = Main.layoutManager.monitors;
                     for (let i = 0; i < monitors.length; i++) {
                         if (i != this._primaryIndex) {
                             eP.thumbnails[i]._controls.show();
@@ -564,7 +570,7 @@ const workspacesPatch = new Lang.Class({
             });
             this.wsDispInjection['hide'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, 'hide',
                 function(){
-                    let monitors = LayoutManager.monitors;
+                    let monitors = Main.layoutManager.monitors;
                     for (let i = 0; i < monitors.length; i++) {
                         if (i != this._primaryIndex) {
                             eP.thumbnails[i]._controls.hide();
@@ -585,8 +591,10 @@ const workspacesPatch = new Lang.Class({
                     for (let i = 0; i < this._workspacesViews.length; i++)
                         this._workspacesViews[i].syncStacking(stackIndices);
 
+                    this._thumbnailsBox = new WorkspaceThumbnails.myThumbnailsBox(this.monitorIndex);
+
                     this._thumbnailsBox.syncStacking(stackIndices);
-                    let monitors = LayoutManager.monitors;
+                    let monitors = Main.layoutManager.monitors;
                     for (let i = 0; i < monitors.length; i++) {
                         if (i != this._primaryIndex) {
                             eP.thumbnails[i]._thumbnailsBox.syncStacking(stackIndices);

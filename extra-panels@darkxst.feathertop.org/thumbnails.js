@@ -2,8 +2,10 @@
 
 const Clutter = imports.gi.Clutter;
 const Lang = imports.lang;
+const Layout = imports.ui.layout;
 const Main = imports.ui.main;
 const Meta = imports.gi.Meta;
+const Background = imports.ui.background;
 const Shell = imports.gi.Shell;
 const St = imports.gi.St;
 const WorkspaceThumbnail = imports.ui.workspaceThumbnail;
@@ -33,12 +35,13 @@ const Thumbnails = new Lang.Class({
         //this.Schema = Schema;
         this._workspacesDisplay = Main.overview._workspacesDisplay;
         if (this._workspaceDisplay == undefined)
-            this._workspacesDisplay = Main.overview._viewSelector._workspacesDisplay;
+            this._workspacesDisplay = Main.overview.viewSelector._workspacesDisplay;
 
         //this._workspacesDisplay._controls2 = this._controls;
 
         let monitor = Main.layoutManager.monitors[this.monitorIndex];
         this.actor = new Shell.GenericContainer();
+
         this.actor.connect('get-preferred-width', Lang.bind(this, this._getPreferredWidth));
         this.actor.connect('get-preferred-height', Lang.bind(this, this._getPreferredHeight));
         this.actor.connect('allocate', Lang.bind(this, this._allocate));
@@ -59,8 +62,8 @@ const Thumbnails = new Lang.Class({
         this.actor.add_actor(controls);
         controls.reactive = true;
         controls.track_hover = true;
-        controls.connect('notify::hover',
-                         Lang.bind(this._workspacesDisplay, this._workspacesDisplay._onControlsHoverChanged));
+        //controls.connect('notify::hover',
+          //               Lang.bind(this._workspacesDisplay, _onControlsHoverChanged));
         controls.connect('scroll-event',
                          Lang.bind(this._workspacesDisplay, this._workspacesDisplay._onScrollEvent));
         this._thumbnailsBox = new myThumbnailsBox(this.monitorIndex);
@@ -72,9 +75,9 @@ const Thumbnails = new Lang.Class({
     },
     _setBackgroundClass: function(){
         if (this.Schema.get_boolean('workspace-left'))
-            this._thumbnailsBox._background.set_style_pseudo_class('rtl');
+            this._thumbnailsBox.actor.set_style_pseudo_class('rtl');
         else
-            this._thumbnailsBox._background.set_style_pseudo_class('ltr');
+            this._thumbnailsBox.actor.set_style_pseudo_class('ltr');
     },
     _getPreferredWidth: function (actor, forHeight, alloc) {
         // pass through the call in case the child needs it, but report 0x0
@@ -175,13 +178,19 @@ const myWorkspaceThumbnail = new Lang.Class({
 
         this.actor.connect('destroy', Lang.bind(this, this._onDestroy));
 
-        this._background = Meta.BackgroundActor.new_for_screen(global.screen);
+        this._background = new Meta.BackgroundActor();
+        this._bgManager = new Background.BackgroundManager({ monitorIndex: Main.layoutManager.primaryIndex,
+                                                             container: this._contents,
+                                                             effects: Meta.BackgroundEffects.NONE });
         this._contents.add_actor(this._background);
 
         let monitor = Main.layoutManager.monitors[monitorIndex];
         this.setPorthole(monitor.x, monitor.y, monitor.width, monitor.height);
 
-        let windows = global.get_window_actors().filter(this._isWorkspaceWindow, this);
+        let windows = global.get_window_actors().filter(Lang.bind(this, function(win) {
+            let actor = win.meta_window;
+            return actor.located_on_workspace(metaWorkspace);
+        }));
 
         // Create clones for windows that should be visible in the Overview
         this._windows = [];
@@ -224,7 +233,7 @@ const myThumbnailsBox = new Lang.Class({
     	this.parent();
     	this.monitorIndex = monitorIndex;
         let monitors = Main.layoutManager.monitors;
-
+        this._windows = [];
 
     },
     show: function() {
@@ -243,6 +252,7 @@ const myThumbnailsBox = new Lang.Class({
 
         // The "porthole" is the portion of the screen that we show in the workspaces
         let panelHeight = Main.panel.actor.height;
+
     	let monitor = Main.layoutManager.monitors[this.monitorIndex];
         //let monitor = Main.layoutManager.monitors[0];
     	this._porthole = {
@@ -254,6 +264,17 @@ const myThumbnailsBox = new Lang.Class({
         this.addThumbnails(0, global.screen.n_workspaces);
 
 
+    },
+
+    hide: function() {
+        if (this._switchWorkspaceNotifyId > 0) {
+            global.window_manager.disconnect(this._switchWorkspaceNotifyId);
+            this._switchWorkspaceNotifyId = 0;
+        }
+
+        for (let w = 0; w < this._thumbnails.length; w++)
+            this._thumbnails[w].destroy();
+        this._thumbnails = [];
     },
 
     addThumbnails: function(start,count){
@@ -299,6 +320,20 @@ const myThumbnailsBox = new Lang.Class({
         }
 
         this._queueUpdateStates();
-    }
+    },
+    syncStacking: function(stackIndices) {
+        this._windows.sort(function (a, b) { return stackIndices[a.metaWindow.get_stable_sequence()] - stackIndices[b.metaWindow.get_stable_sequence()]; });
+
+        for (let i = 0; i < this._windows.length; i++) {
+            let clone = this._windows[i];
+            let metaWindow = clone.metaWindow;
+            if (i == 0) {
+                clone.setStackAbove(this._background);
+            } else {
+                let previousClone = this._windows[i - 1];
+                clone.setStackAbove(previousClone.actor);
+            }
+        }
+    },
 
 });
