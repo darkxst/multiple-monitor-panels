@@ -22,6 +22,7 @@ const Gio = imports.gi.Gio;
 const Lang = imports.lang;
 const Layout = imports.ui.layout;
 const Main = imports.ui.main;
+const LayoutManager = imports.ui.LayoutManager;
 const Mainloop = imports.mainloop;
 const Meta = imports.gi.Meta;
 const Overview = imports.ui.overview;
@@ -51,21 +52,21 @@ const ExtraPanels = new Lang.Class({
     _init : function() {
         Schema = Convenience.getSettings();
         this.Schema = Schema;
-        this.monitors = Main.layoutManager.monitors;
-        this.primaryIndex = Main.layoutManager.primaryIndex;
+        this.monitors = LayoutManager.monitors;
+        this.primaryIndex = LayoutManager.primaryIndex;
         this.panelBoxes = [];
         this.panels = [];
         this.thumbnails = [];
         this.workspaceSwitchers = Schema.get_boolean('display-workspace');
-        Main.layoutManager.panelBoxes = this.panelBoxes;
-        
+        LayoutManager.panelBoxes = this.panelBoxes;
+
         for (let i = 0; i < this.monitors.length; i++) {
             if (i == this.primaryIndex)
                 continue;
             this.panelBoxes[i] = new St.BoxLayout({ name: 'panelBox'+(i+1), vertical: true });
-            Main.layoutManager.addChrome(this.panelBoxes[i], { affectsStruts: true });
+            LayoutManager.addChrome(this.panelBoxes[i], { affectsStruts: true });
             this.panels[i] = new Panel.Panel();
-            Main.layoutManager.panelBox.remove_actor(this.panels[i].actor);
+            LayoutManager.panelBox.remove_actor(this.panels[i].actor);
             this.panelBoxes[i].add(this.panels[i].actor)
             this.panelBoxes[i].set_position(this.monitors[i].x, this.monitors[i].y);
             this.panelBoxes[i].set_width(this.monitors[i].width);
@@ -99,10 +100,10 @@ const ExtraPanels = new Lang.Class({
                     this.panels[i].statusArea[icon].container.hide();
                 }
             }
-            
+
         }
 
-        this.monSigId = Main.layoutManager.connect('monitors-changed', Lang.bind(this, this._updatePanels));
+        this.monSigId = LayoutManager.connect('monitors-changed', Lang.bind(this, this._updatePanels));
         //we need to rename extra the top bars in Main.ctrlAltTabManager._items[5].name = "Top Bar 2"
         //update labels in the ctrlAltTabManager
         for (let i = 0; i < this.monitors.length; i++) {
@@ -143,7 +144,7 @@ const ExtraPanels = new Lang.Class({
             }));
         }
     },
-    
+
     _updatePanels : function(){
         this.destroy();
         this._init();
@@ -151,9 +152,9 @@ const ExtraPanels = new Lang.Class({
     },
     _updateCorners : function(monIndex){
         let corner = new Layout.HotCorner();
-        Main.layoutManager._hotCorners.push(corner);
+        LayoutManager._hotCorners.push(corner);
         corner.actor.set_position(this.monitors[monIndex].x, this.monitors[monIndex].y);
-        Main.layoutManager._chrome.addActor(corner.actor);
+        LayoutManager._chrome.addActor(corner.actor);
         this.panels[monIndex]._hotCorner = corner;
     },
     _updateBarriers : function(){
@@ -185,10 +186,10 @@ const ExtraPanels = new Lang.Class({
 
             if (this._leftPanelBarriers[i] > 0)
                 global.destroy_pointer_barrier(this._leftPanelBarriers[i]);
-            
+
             this.panels[i]._hotCorner.actor.destroy();
         }
-        Main.layoutManager.disconnect(this.monSigId);
+        LayoutManager.disconnect(this.monSigId);
         if (this.workspaceSwitchers){
             for (i in this.thumbInjection)
                 removeInjection(WT.ThumbnailsBox.prototype, this.thumbInjection, i);
@@ -205,9 +206,9 @@ const HijackPanelButton = new Lang.Class({
         //might need to add timer here, to run initial update after shell startup.
 
         //target monitor for moving icons
-        let monitors = Main.layoutManager.monitors;
-        let primaryIndex = Main.layoutManager.primaryIndex;
-        
+        let monitors = LayoutManager.monitors;
+        let primaryIndex = LayoutManager.primaryIndex;
+
         for (let i = 0; i < monitors.length; i++) {
             if (i == primaryIndex)
                 continue;
@@ -221,7 +222,7 @@ const HijackPanelButton = new Lang.Class({
 
         this.settingsId = Schema.connect('changed::available-list',
                                 Lang.bind(this, this._reorderIcons));
-        
+
         this.wmIcons = [];
         this.icons = [];
 
@@ -242,7 +243,7 @@ const HijackPanelButton = new Lang.Class({
             this.wmIcons = [];
             this._moveStatusIcon();
         }
-        
+
     },
     _reorderIcons: function(){
 
@@ -250,7 +251,7 @@ const HijackPanelButton = new Lang.Class({
         this._returnIcons();
         this._moveIcons();
     },
-    
+
     _moveStatusIcon: function(){
 
         this._findIcons();
@@ -269,7 +270,7 @@ const HijackPanelButton = new Lang.Class({
 
                 for (let j in containers){
                     let box = containers[j]
-                    
+
                     if (Main.panel[box] == o.container.get_parent()){
                         let target = Main.__eP.panels[this.iconTarget][box];
                         //find index to insert at
@@ -290,7 +291,7 @@ const HijackPanelButton = new Lang.Class({
                         Main.panel[box].remove_actor(o.container);
                         Main.__eP.panels[this.iconTarget][box].insert_child_at_index(o.container,idx);
                     }
-                } 
+                }
             }
         }
     },
@@ -332,7 +333,7 @@ const HijackPanelButton = new Lang.Class({
         return (blackList.indexOf(icon) != -1)?true:false;
     },
     _returnIcons: function(){
-        //return in hijack icons to primary panel 
+        //return in hijack icons to primary panel
         this.statusArea = Main.panel.statusArea;
         let containers = ['_leftBox','_centerBox','_rightBox'];
         for (let i in this.wmIcons){
@@ -353,7 +354,7 @@ const HijackPanelButton = new Lang.Class({
         Schema.disconnect(this.settingsId);
 
         this._returnIcons();
-        
+
     }
 });
 
@@ -401,7 +402,7 @@ const NewAppMenuButton = new Lang.Class({
                 lastStartedApp = this._startingApps[i];
 
         let targetApp = focusedApp != null ? null : lastStartedApp;
-    
+
         //find last used app window
         if (targetApp == null) {
             let tracker = Shell.WindowTracker.get_default();
@@ -410,7 +411,7 @@ const NewAppMenuButton = new Lang.Class({
             let windows = display.get_tab_list(Meta.TabList.NORMAL_ALL, screen,
                                            screen.get_active_workspace());
 
-            for (let i = 0; i < windows.length; i++){           
+            for (let i = 0; i < windows.length; i++){
                 if (windows[i].get_monitor() == this.monitorIndex){
                     targetApp = tracker.get_window_app(windows[i]);
                     break;
@@ -514,7 +515,7 @@ const workspacesPatch = new Lang.Class({
     _init: function(){
         this.wsDispInjection = {};
         this.wsDispPatch = {};
-        this.monitors = Main.layoutManager.monitors;
+        this.monitors = LayoutManager.monitors;
 
         this.wsDispInjection['_updateWorkspacesGeometry'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, '_updateWorkspacesGeometry',
             function() {
@@ -525,10 +526,10 @@ const workspacesPatch = new Lang.Class({
                 let thisParent = Main.overview._viewSelector._workspacesDisplay;
                 if (!thisParent._workspacesViews)
                     return;
-                
+
                 let panelHeight = Main.panel.actor.height;
                 let resWidth = (eP.workspaceSwitchers)?thisParent._controls.get_width():0;
-                let monitors = Main.layoutManager.monitors;
+                let monitors = LayoutManager.monitors;
                 let overviewSpacing = Main.overview._spacing;
 
                 let m = 0;
@@ -536,7 +537,7 @@ const workspacesPatch = new Lang.Class({
                 for (let i = 0; i < monitors.length; i++) {
                     if (!thisParent._workspacesOnlyOnPrimary && i != thisParent._primaryIndex ) {
                         let x1 = monitors[i].x + (Schema.get_boolean('workspace-left')?resWidth:0);
-                        
+
                             thisParent._workspacesViews[m].setClipRect(x1,
                                                                        monitors[i].y + panelHeight,
                                                                        monitors[i].width - resWidth,
@@ -545,7 +546,7 @@ const workspacesPatch = new Lang.Class({
                                                                        monitors[i].y + panelHeight + overviewSpacing/2,
                                                                        monitors[i].width - resWidth - overviewSpacing,
                                                                        monitors[i].height - panelHeight - overviewSpacing, 0);
-                        
+
                     }
                     m++;
                 }
@@ -553,7 +554,7 @@ const workspacesPatch = new Lang.Class({
         if (eP.workspaceSwitchers){
             this.wsDispInjection['show'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, 'show',
                 function(){
-                    let monitors = Main.layoutManager.monitors;
+                    let monitors = LayoutManager.monitors;
                     for (let i = 0; i < monitors.length; i++) {
                         if (i != this._primaryIndex) {
                             eP.thumbnails[i]._controls.show();
@@ -563,7 +564,7 @@ const workspacesPatch = new Lang.Class({
             });
             this.wsDispInjection['hide'] = injectToFunction(WorkspacesView.WorkspacesDisplay.prototype, 'hide',
                 function(){
-                    let monitors = Main.layoutManager.monitors;
+                    let monitors = LayoutManager.monitors;
                     for (let i = 0; i < monitors.length; i++) {
                         if (i != this._primaryIndex) {
                             eP.thumbnails[i]._controls.hide();
@@ -585,7 +586,7 @@ const workspacesPatch = new Lang.Class({
                         this._workspacesViews[i].syncStacking(stackIndices);
 
                     this._thumbnailsBox.syncStacking(stackIndices);
-                    let monitors = Main.layoutManager.monitors;
+                    let monitors = LayoutManager.monitors;
                     for (let i = 0; i < monitors.length; i++) {
                         if (i != this._primaryIndex) {
                             eP.thumbnails[i]._thumbnailsBox.syncStacking(stackIndices);
@@ -617,9 +618,9 @@ function enable() {
     eP.hijack = new HijackPanelButton();
     Main.panel._appMenus = [];
 
-    for (let i = 0; i < eP.monitors.length; i++) {  
-        let panel;  
-            
+    for (let i = 0; i < eP.monitors.length; i++) {
+        let panel;
+
         if (i == eP.primaryIndex) {
             panel = Main.panel;
         } else {
@@ -634,13 +635,13 @@ function enable() {
     //emit signal to force initial AppMenu sync
     let tracker = Shell.WindowTracker.get_default();
     //tracker.emit('notify::focus-app', tracker.focus_app);
-    tracker.emit('notify::focus-app', null);    
+    tracker.emit('notify::focus-app', null);
 }
 
 
 function disable() {
     log("Disabling Extra Panels Extension");
-    //Destroy 
+    //Destroy
     Main.panel._appMenus.forEach(function(aMenu){
         global.display.disconnect(aMenu.grabSigId);
         aMenu.destroy();
@@ -649,9 +650,9 @@ function disable() {
 
     Main.__eP.hijack.destroy();
     eP.workspacePatch.destroy();
-    
+
     eP.destroy();
-        
+
     // Restore orignal AppMenu
     //Main.panel.statusArea.appMenu = new Panel.AppMenuButton(Main.panel);
     let indicator = new Panel.AppMenuButton(Main.panel);
