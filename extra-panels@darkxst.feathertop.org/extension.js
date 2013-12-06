@@ -45,6 +45,7 @@ let shell_Version = Config.PACKAGE_VERSION;
 
 let eP, Schema, panels;
 
+
 const ExtraPanels = new Lang.Class({
     Name: 'ExtraPanels',
 
@@ -58,7 +59,7 @@ const ExtraPanels = new Lang.Class({
         this.thumbnails = [];
         this.workspaceSwitchers = Schema.get_boolean('display-workspace');
         Main.layoutManager.panelBoxes = this.panelBoxes;
-        
+
         for (let i = 0; i < this.monitors.length; i++) {
             if (i == this.primaryIndex)
                 continue;
@@ -70,7 +71,8 @@ const ExtraPanels = new Lang.Class({
             this.panelBoxes[i].set_position(this.monitors[i].x, this.monitors[i].y);
             this.panelBoxes[i].set_width(this.monitors[i].width);
 
-            this._updateCorners(i);
+            // this._updateCorners(i);
+            /*
             let barrier_timeout = Mainloop.timeout_add(
                         200,
                         Lang.bind(this, function() {
@@ -78,17 +80,20 @@ const ExtraPanels = new Lang.Class({
                             Mainloop.source_remove(barrier_timeout);
                             return true;
                         }));
+            */
 
             //Load Thumnails
+
             if (this.workspaceSwitchers){
                 this.thumbnails[i] = new WorkspaceThumbnails.Thumbnails(i);
                 //global.overlay_group.add_actor(this.thumbnails[i].actor);
-                if (this.monitors[i].x < Main.overview._group.x) {
-                    let x = this.monitors[i].x - Main.overview._group.x;
-                    this.thumbnails[i].actor.set_position(x, this.monitors[i].y);
-                }
-                Main.overview._group.add_actor(this.thumbnails[i].actor);
+            //    if (this.monitors[i].x < Main.overview._group.x) {
+            //        let x = this.monitors[i].x - Main.overview._group.x;
+            //        this.thumbnails[i].actor.set_position(x, this.monitors[i].y);
+             //   }
+            //    Main.overview._group.add_actor(this.thumbnails[i].actor);
             }
+
 
             Schema.bind('display-clock', this.panels[i].statusArea.dateMenu.actor, 'visible', Gio.SettingsBindFlags.GET);
             Schema.bind('display-activities', this.panels[i].statusArea.activities.actor, 'visible', Gio.SettingsBindFlags.GET);
@@ -99,7 +104,7 @@ const ExtraPanels = new Lang.Class({
                     this.panels[i].statusArea[icon].container.hide();
                 }
             }
-            
+
         }
 
         this.monSigId = Main.layoutManager.connect('monitors-changed', Lang.bind(this, this._updatePanels));
@@ -143,7 +148,7 @@ const ExtraPanels = new Lang.Class({
             }));
         }
     },
-    
+
     _updatePanels : function(){
         this.destroy();
         this._init();
@@ -151,6 +156,7 @@ const ExtraPanels = new Lang.Class({
     },
     _updateCorners : function(monIndex){
         let corner = new Layout.HotCorner();
+
         Main.layoutManager._hotCorners.push(corner);
         corner.actor.set_position(this.monitors[monIndex].x, this.monitors[monIndex].y);
         Main.layoutManager._chrome.addActor(corner.actor);
@@ -185,7 +191,7 @@ const ExtraPanels = new Lang.Class({
 
             if (this._leftPanelBarriers[i] > 0)
                 global.destroy_pointer_barrier(this._leftPanelBarriers[i]);
-            
+
             this.panels[i]._hotCorner.actor.destroy();
         }
         Main.layoutManager.disconnect(this.monSigId);
@@ -206,8 +212,9 @@ const HijackPanelButton = new Lang.Class({
 
         //target monitor for moving icons
         let monitors = Main.layoutManager.monitors;
+        log(monitors);
         let primaryIndex = Main.layoutManager.primaryIndex;
-        
+
         for (let i = 0; i < monitors.length; i++) {
             if (i == primaryIndex)
                 continue;
@@ -221,7 +228,7 @@ const HijackPanelButton = new Lang.Class({
 
         this.settingsId = Schema.connect('changed::available-list',
                                 Lang.bind(this, this._reorderIcons));
-        
+
         this.wmIcons = [];
         this.icons = [];
 
@@ -242,7 +249,7 @@ const HijackPanelButton = new Lang.Class({
             this.wmIcons = [];
             this._moveStatusIcon();
         }
-        
+
     },
     _reorderIcons: function(){
 
@@ -250,7 +257,7 @@ const HijackPanelButton = new Lang.Class({
         this._returnIcons();
         this._moveIcons();
     },
-    
+
     _moveStatusIcon: function(){
 
         this._findIcons();
@@ -269,7 +276,7 @@ const HijackPanelButton = new Lang.Class({
 
                 for (let j in containers){
                     let box = containers[j]
-                    
+
                     if (Main.panel[box] == o.container.get_parent()){
                         let target = Main.__eP.panels[this.iconTarget][box];
                         //find index to insert at
@@ -290,7 +297,7 @@ const HijackPanelButton = new Lang.Class({
                         Main.panel[box].remove_actor(o.container);
                         Main.__eP.panels[this.iconTarget][box].insert_child_at_index(o.container,idx);
                     }
-                } 
+                }
             }
         }
     },
@@ -332,7 +339,7 @@ const HijackPanelButton = new Lang.Class({
         return (blackList.indexOf(icon) != -1)?true:false;
     },
     _returnIcons: function(){
-        //return in hijack icons to primary panel 
+        //return in hijack icons to primary panel
         this.statusArea = Main.panel.statusArea;
         let containers = ['_leftBox','_centerBox','_rightBox'];
         for (let i in this.wmIcons){
@@ -353,7 +360,7 @@ const HijackPanelButton = new Lang.Class({
         Schema.disconnect(this.settingsId);
 
         this._returnIcons();
-        
+
     }
 });
 
@@ -401,7 +408,7 @@ const NewAppMenuButton = new Lang.Class({
                 lastStartedApp = this._startingApps[i];
 
         let targetApp = focusedApp != null ? null : lastStartedApp;
-    
+
         //find last used app window
         if (targetApp == null) {
             let tracker = Shell.WindowTracker.get_default();
@@ -410,7 +417,7 @@ const NewAppMenuButton = new Lang.Class({
             let windows = display.get_tab_list(Meta.TabList.NORMAL_ALL, screen,
                                            screen.get_active_workspace());
 
-            for (let i = 0; i < windows.length; i++){           
+            for (let i = 0; i < windows.length; i++){
                 if (windows[i].get_monitor() == this.monitorIndex){
                     targetApp = tracker.get_window_app(windows[i]);
                     break;
@@ -472,10 +479,10 @@ const NewAppMenuButton = new Lang.Class({
         }
 
         this._targetApp = targetApp;
-        let icon = targetApp.get_faded_icon(2 * Panel.PANEL_ICON_SIZE);
+        let icon = targetApp.get_faded_icon(2 * Panel.PANEL_ICON_SIZE, this._iconBox.text_direction);
 
         this._label.setText(targetApp.get_name());
-        this.setName(targetApp.get_name());
+        //this.setName(targetApp.get_name());
 
         this._iconBox.set_child(icon);
         this._iconBox.show();
@@ -522,10 +529,10 @@ const workspacesPatch = new Lang.Class({
                     let thisParent = Main.overview._workspacesDisplay;
                 } catch(e) {}
                 if (thisParent == undefined)*/
-                let thisParent = Main.overview._viewSelector._workspacesDisplay;
+                let thisParent = Main.overview.viewSelector._workspacesDisplay;
                 if (!thisParent._workspacesViews)
                     return;
-                
+
                 let panelHeight = Main.panel.actor.height;
                 let resWidth = (eP.workspaceSwitchers)?thisParent._controls.get_width():0;
                 let monitors = Main.layoutManager.monitors;
@@ -536,7 +543,7 @@ const workspacesPatch = new Lang.Class({
                 for (let i = 0; i < monitors.length; i++) {
                     if (!thisParent._workspacesOnlyOnPrimary && i != thisParent._primaryIndex ) {
                         let x1 = monitors[i].x + (Schema.get_boolean('workspace-left')?resWidth:0);
-                        
+
                             thisParent._workspacesViews[m].setClipRect(x1,
                                                                        monitors[i].y + panelHeight,
                                                                        monitors[i].width - resWidth,
@@ -545,7 +552,7 @@ const workspacesPatch = new Lang.Class({
                                                                        monitors[i].y + panelHeight + overviewSpacing/2,
                                                                        monitors[i].width - resWidth - overviewSpacing,
                                                                        monitors[i].height - panelHeight - overviewSpacing, 0);
-                        
+
                     }
                     m++;
                 }
@@ -584,6 +591,8 @@ const workspacesPatch = new Lang.Class({
                     for (let i = 0; i < this._workspacesViews.length; i++)
                         this._workspacesViews[i].syncStacking(stackIndices);
 
+                    this._thumbnailsBox = new WorkspaceThumbnails.myThumbnailsBox(this.monitorIndex);
+
                     this._thumbnailsBox.syncStacking(stackIndices);
                     let monitors = Main.layoutManager.monitors;
                     for (let i = 0; i < monitors.length; i++) {
@@ -617,9 +626,9 @@ function enable() {
     eP.hijack = new HijackPanelButton();
     Main.panel._appMenus = [];
 
-    for (let i = 0; i < eP.monitors.length; i++) {  
-        let panel;  
-            
+    for (let i = 0; i < eP.monitors.length; i++) {
+        let panel;
+
         if (i == eP.primaryIndex) {
             panel = Main.panel;
         } else {
@@ -634,13 +643,13 @@ function enable() {
     //emit signal to force initial AppMenu sync
     let tracker = Shell.WindowTracker.get_default();
     //tracker.emit('notify::focus-app', tracker.focus_app);
-    tracker.emit('notify::focus-app', null);    
+    tracker.emit('notify::focus-app', null);
 }
 
 
 function disable() {
     log("Disabling Extra Panels Extension");
-    //Destroy 
+    //Destroy
     Main.panel._appMenus.forEach(function(aMenu){
         global.display.disconnect(aMenu.grabSigId);
         aMenu.destroy();
@@ -649,9 +658,9 @@ function disable() {
 
     Main.__eP.hijack.destroy();
     eP.workspacePatch.destroy();
-    
+
     eP.destroy();
-        
+
     // Restore orignal AppMenu
     //Main.panel.statusArea.appMenu = new Panel.AppMenuButton(Main.panel);
     let indicator = new Panel.AppMenuButton(Main.panel);
